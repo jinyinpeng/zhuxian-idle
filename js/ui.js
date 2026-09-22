@@ -883,19 +883,12 @@
             '<button class="sex-btn" data-rename="1">改名字</button>' +
             '<button class="sex-btn" data-changesect="1">换门派</button>' +
           '</div>' +
-          '<button class="danger-btn" data-act="logout">注销角色</button>' +
-        '</div>' +
-        '<div style="font-size:11px;color:#78716c;line-height:1.7;margin-top:6px">' +
-          '注销后将<b style="color:#f87171">清空全部修炼进度</b>，并返回角色创建界面 —— 可重新选择门派与性别。' +
         '</div>';
 
     openModal({
       title: '设置', sub: '诛仙问道 · 挂机修仙',
       body: body,
-      buttons: [
-        { label: '注销角色 · 重新选择', cls: 'danger', keep: true, onClick: () => confirmReset() },
-        { label: '关闭', cls: 'gold' }
-      ]
+      buttons: [{ label: '关闭', cls: 'gold' }]
     });
 
     /* v19：游戏中直接切换性别（即时换立绘 + 顶栏头像 + 存档） */
@@ -998,7 +991,14 @@
         const v = (global.prompt('输入新的道号（2~6 字）', G.state.name) || '').trim();
         if (!v) return;
         if (v.length < 2 || v.length > 6) { R.toast('道号需 2~6 个字'); return; }
-        G.state.name = v; G.save(); UI.renderTop();
+        G.state.name = v;
+        try { G.save(); } catch (e) { }
+        /* 这里必须调本文件内的 renderTop()；写成 UI.renderTop() 会取到上面的
+           局部状态对象 UI（只有 tab/bagSel/questSig/sellQ），点一次就抛异常，
+           导致改名后顶栏不刷新、提示也不弹。 */
+        renderTop();
+        const nm = el.modal.querySelector('.sa-name');
+        if (nm) nm.textContent = '当前角色：' + v;
         R.toast('道号已改为「' + v + '」');
         closeModal();
       });
@@ -1018,10 +1018,6 @@
       });
     });
 
-    /* v16：区块内的注销按钮走同一套确认流程 */
-    el.modal.querySelectorAll('[data-act="logout"]').forEach(n => {
-      n.addEventListener('click', () => confirmReset());
-    });
     el.modal.querySelectorAll('[data-set]').forEach(n => {
       n.addEventListener('click', () => {
         const k = n.getAttribute('data-set');
@@ -1082,22 +1078,6 @@
         closeModal();
         R.toast(before + ' → ' + G.sectOf(id).name + '，已改换门庭', 'gold');
       });
-    });
-  }
-
-  function confirmReset() {
-    openModal({
-      title: '注销角色',
-      sub: '此操作不可撤销',
-      body: '<div style="text-align:center;line-height:1.9">' +
-        '将清空当前角色（<b>' + esc(G.state.name) + '</b>）的<br/>' +
-        '全部修为、装备、行囊与任务进度。<br/><br/>' +
-        '注销后将<b>返回角色创建界面</b>，<br/>可重新选择门派与性别，从炼气一层重新开始。<br/><br/>' +
-        '<span style="color:#f87171">请谨慎操作。</span></div>',
-      buttons: [
-        { label: '再想想' },
-        { label: '确认注销', cls: 'danger', onClick: () => { G.reset(); location.reload(); } }
-      ]
     });
   }
 

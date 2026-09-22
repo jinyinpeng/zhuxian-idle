@@ -2443,14 +2443,7 @@ html, body { overscroll-behavior-y: auto; }
 .set-account .sa-main { flex: 1; min-width: 0; }
 .set-account .sa-name { font-size: 12.5px; color: #e7e5e4; }
 .set-account .sa-sub { font-size: 11px; color: #a8a29e; margin-top: 2px; }
-.danger-btn {
-  flex: none; padding: 8px 14px; border-radius: 9px;
-  border: 1px solid rgba(248,113,113,.5);
-  background: rgba(248,113,113,.14);
-  color: #fca5a5; font-size: 12px; font-family: inherit; font-weight: 600;
-  cursor: pointer; transition: .16s;
-}
-.danger-btn:active, .danger-btn:hover { background: rgba(248,113,113,.26); color: #fecaca; }
+/* v27：注销角色功能已移除，.danger-btn 样式一并删除 */
 .modal-btn.danger { border-color: rgba(248,113,113,.5); color: #fca5a5; background: rgba(248,113,113,.12); }
 
 /* ============================ v14 性别选择 ============================ */
