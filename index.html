@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+<meta name="theme-color" content="#0c0a09" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<title>诛仙问道 · 挂机修仙</title>
+<link rel="stylesheet" href="css/style.css?v=202609230208" />
+</head>
+<body>
+<div id="app">
+
+  <!-- ===================== 角色创建 ===================== -->
+  <section id="screen-create" class="screen">
+    <div class="create-sky"></div>
+    <div class="create-ridge cr1"></div>
+    <div class="create-ridge cr2"></div>
+    <div class="create-veil"></div>
+    <div class="create-inner">
+      <header class="brand">
+        <div class="brand-mark"><svg class="ic"><use href="#i-swords"></use></svg></div>
+        <h1 class="brand-title">诛仙问道</h1>
+        <p class="brand-sub">一剑霜寒十四州 · 万古仙途任我行</p>
+      </header>
+
+      <div class="card field-card">
+        <div class="field-row">
+          <span class="field-label">道号</span>
+          <input id="in-name" class="text-input" maxlength="8" value="无名散修" autocomplete="off" spellcheck="false" />
+          <button id="btn-name" class="ghost-btn" aria-label="随机道号"><svg class="ic"><use href="#i-refresh-cw"></use></svg></button>
+        </div>
+        <div class="field-label sect-label">性别</div>
+        <div class="gender-row" id="gender-row">
+          <button class="gender-btn on" data-gender="male">男</button>
+          <button class="gender-btn" data-gender="female">女</button>
+        </div>
+        <div class="field-label sect-label">择一门派</div>
+        <div id="sect-list" class="sect-list"></div>
+        <div id="sect-info" class="sect-info"></div>
+      </div>
+
+      <button id="btn-start" class="primary-btn">踏 入 仙 途</button>
+      <p class="tip"><svg class="ic ic-xs"><use href="#i-info"></use></svg> 游戏自动挂机，离线亦可积累收益</p>
+    </div>
+  </section>
+
+  <!-- ===================== 主界面 ===================== -->
+  <section id="screen-game" class="screen hidden">
+    <header class="topbar" id="topbar"></header>
+
+    <div class="stage" id="stage">
+      <div class="sky" id="sky"></div>
+      <div class="clouds"><div class="cloud c1"></div><div class="cloud c2"></div><div class="cloud c3"></div></div>
+      <div class="stars"></div>
+      <div class="moon"></div>
+      <div class="shaft"></div><div class="shaft s2"></div>
+      <div class="hill h1"></div><div class="hill h2"></div><div class="hill h3"></div>
+      <div class="qi"><i class="q1"></i><i class="q2"></i><i class="q3"></i></div>
+      <div class="ridge-x2"></div>
+      <div class="ridge-x1"></div>
+      <div class="ridge ridge-far" id="ridge-far"></div>
+      <div class="ridge ridge-mid" id="ridge-mid"></div>
+      <div class="ridge ridge-near" id="ridge-near"></div>
+      <div class="haze z1"></div><div class="haze z2"></div>
+      <div class="ground"></div>
+      <div class="cloudsea"><i class="s1"></i><i class="s2"></i><i class="s3"></i></div>
+      <div class="scenery" id="scenery">
+        <!-- r01 青云山脚：竹海 + 石阶 -->
+        <div class="sc sc-r01"><div class="bamboo bl"></div><div class="bamboo br"></div><div class="steps"></div></div>
+        <!-- r02 幽泉谷：寒潭 + 迷雾 -->
+        <div class="sc sc-r02"><div class="mist m1"></div><div class="mist m2"></div><div class="pond"></div></div>
+        <!-- r03 万蝠古窟：岩壁 + 钟乳石 + 飞蝠 -->
+        <div class="sc sc-r03"><div class="wall wl"></div><div class="wall wr"></div><div class="stal t1"></div><div class="stal t2"></div><div class="stal t3"></div><div class="stal t4"></div><div class="bat b1"></div><div class="bat b2"></div></div>
+        <!-- r04 焚香谷外：火山 + 熔岩裂隙 -->
+        <div class="sc sc-r04"><div class="volc"></div><div class="crack"></div></div>
+        <!-- r05 死亡沼泽：瘴气 + 枯树 + 沼气泡 -->
+        <div class="sc sc-r05"><div class="miasma"></div><div class="dead d1"></div><div class="dead d2"></div><div class="bub p1"></div><div class="bub p2"></div><div class="bub p3"></div></div>
+        <!-- r06 女娲神庙：石柱 + 殿阶 + 香火 -->
+        <div class="sc sc-r06"><div class="pillar p1"></div><div class="pillar p2"></div><div class="pillar p3"></div><div class="pillar p4"></div><div class="incense i1"></div><div class="incense i2"></div><div class="temple-floor"></div></div>
+        <!-- r07 通天峰：剑峰 + 云梯 + 飞雪 -->
+        <div class="sc sc-r07"><div class="peak k1"></div><div class="peak k2"></div><div class="peak k3"></div><div class="stair"></div><div class="snow"></div></div>
+        <!-- r08 诛仙剑阵：血雾 + 剑林 + 阵图 -->
+        <div class="sc sc-r08"><div class="bloodmist"></div><div class="swordland"><i></i><i></i><i></i><i></i><i></i><i></i></div><div class="array"></div></div>
+      </div>
+      <div class="fg"></div>
+      <div class="grade"></div><div class="grade2"></div><div class="lift"></div>
+      <canvas class="fx" id="fx"></canvas>
+      <div class="hud-top" id="hud-top"></div>
+      <div class="arena" id="arena"></div>
+      <div class="cast-layer" id="cast-layer"></div>
+      <div class="float-layer" id="float-layer"></div>
+      <div class="log-box" id="log-box"></div>
+    </div>
+
+    <div class="dash" id="dash"></div>
+    <nav class="nav" id="nav"></nav>
+
+    <div class="sheet-mask" id="sheet-mask"></div>
+    <div class="sheets" id="sheets"></div>
+  </section>
+
+  <div class="modal-host" id="modal-host"></div>
+  <div class="toast-host" id="toast-host"></div>
+</div>
+<div class="rotate-tip" id="rotate-tip">请竖屏握持手机</div>
+
+<script src="js/icons.js?v=202609230208"></script>
+<script>if (window.LUCIDE_SPRITE) document.body.insertAdjacentHTML('afterbegin', window.LUCIDE_SPRITE);</script>
+<script src="js/data.js?v=202609230208"></script>
+<script src="js/figure.js?v=202609230208"></script>
+<script src="js/skeleton.js?v=202609230208"></script>
+<script src="js/figure-motion.js?v=202609230208"></script>
+<script src="js/music.js?v=202609230208"></script>
+<script src="js/account.js?v=202609230208"></script>
+<script src="js/tcb-sdk.js?v=202609230208"></script>
+<script>window.LX_TCB_ENV = 'lingxu-7-d0ggtxsjw13210d0c';</script>
+<script src="js/core.js?v=202609230208"></script>
+<script src="js/render.js?v=202609230208"></script>
+<script src="js/ui.js?v=202609230208"></script>
+<script src="js/main.js?v=202609230208"></script>
+<script>
+/* ===================== 自动更新到最新版 =====================
+   发布时 BUILD 会被替换为发布时间戳：
+     · 资源带 ?v=BUILD → 永不命中旧缓存
+     · 每 45 秒 / 每次切回前台检查 version.json，发现新版自动刷新
+   存档在 localStorage，刷新不会丢进度。 */
+(function () {
+  var CUR = '202609230208';
+  var busy = false;
+  function check() {
+    if (busy) return;
+    busy = true;
+    var url = 'version.json?t=' + Date.now();
+    fetch(url, { cache: 'no-store' })
+      .then(function (r) { return r.ok ? r.json() : null; })
+      .then(function (j) {
+        busy = false;
+        if (!j || !j.v || j.v === CUR) return;
+        try { if (window.LXU && window.LXU.toast) window.LXU.toast('发现新版本，正在更新…'); } catch (e) {}
+        setTimeout(function () {
+          location.replace(location.pathname + '?v=' + encodeURIComponent(j.v));
+        }, 700);
+      })
+      .catch(function () { busy = false; });
+  }
+  setInterval(check, 30000);
+  document.addEventListener('visibilitychange', function () { if (!document.hidden) check(); });
+  window.addEventListener('pageshow', function (e) { if (e.persisted) check(); });
+})();
+</script>
+</body>
+</html>

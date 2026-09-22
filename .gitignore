@@ -1,0 +1,8 @@
+# 本地 / IDE 数据（不属于游戏本体）
+.codebuddy/
+node_modules/
+
+# 临时校验脚本与日志
+_*.ps1
+_*.mjs
+*.log
