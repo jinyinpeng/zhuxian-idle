@@ -34,6 +34,7 @@
   /* ============================ 初始化 ============================ */
   function init() {
     el.stage = $('stage');
+    el.bgPhoto = $('bg-photo');
     el.sky = $('sky');
     el.ridgeFar = $('ridge-far');
     el.ridgeMid = $('ridge-mid');
@@ -99,8 +100,66 @@
   function isDay() { return !(G.state && G.state.settings && G.state.settings.dayMode === false); }
   function dayMix(hex, t) { return mix(hex, '#e6f4f8', t); }
 
+  /* ---------- v28：真实背景图 ----------
+     约定：assets/bg_<regionId>.jpg 或 .png（8 张，竖版）。
+     沿用 figure.js 那套「探测 → 可用则用、不可用回退」的思路：
+       · 只探测 r01：连它都没有就判定这套图尚未产出，后续 8 张一张都不请求，
+         不会在每个地图各打一次 404；
+       · 之后每进一张地图才加载对应图，加载完成前保持 CSS 场景可见，不会闪白。 */
+  const BG_SRC = {};
+  const BG_OK = {}, BG_BAD = {};
+  let bgProbed = false, bgSetOn = false;
+
+  function bgChain(id) {
+    if (!BG_SRC[id]) BG_SRC[id] = ['assets/bg_' + id + '.jpg', 'assets/bg_' + id + '.png'];
+    return BG_SRC[id];
+  }
+
+  /* 按 jpg → png 顺序取第一张能加载的图（已探明的直接复用结论） */
+  function bgLoadFirst(id, done) {
+    if (typeof Image !== 'function') { done(null); return; }
+    const chain = bgChain(id);
+    let i = 0;
+    (function next() {
+      if (i >= chain.length) { done(null); return; }
+      const src = chain[i++];
+      if (BG_OK[src]) { done(src); return; }
+      if (BG_BAD[src]) { next(); return; }
+      const im = new Image();
+      im.onload = function () { BG_OK[src] = true; done(src); };
+      im.onerror = function () { BG_BAD[src] = true; next(); };
+      im.src = src;
+    })();
+  }
+
+  function applyBackdrop(regionId) {
+    if (!el.bgPhoto || !el.stage) return;
+    /* 先撤下上一张：切图时宁可短暂露出 CSS 场景，也不要留上一张地图的残影 */
+    el.stage.classList.remove('has-photo');
+    if (!bgProbed) {
+      bgProbed = true;
+      bgLoadFirst('r01', function (src) {
+        bgSetOn = !!src;
+        if (bgSetOn) applyBackdrop(regionId);
+      });
+      return;
+    }
+    if (!bgSetOn) return;
+    bgLoadFirst(regionId || (G.state && G.state.region), function (src) {
+      if (!src) return;
+      /* 这张图刚被 bgLoadFirst 用 new Image() 验证过，浏览器已有缓存，
+         所以直接亮图，不必再等一次 onload（否则会有一帧空档）；
+         万一缓存被清掉导致加载失败，onerror 再把实景撤回去。 */
+      const im = el.bgPhoto;
+      im.onerror = function () { el.stage.classList.remove('has-photo'); };
+      im.setAttribute('src', src);
+      el.stage.classList.add('has-photo');
+    });
+  }
+
   function setRegion(r) {
     if (!r) return;
+    applyBackdrop(r.id);
     /* v4：切换地图专属地形（.stage[data-region] 控制 .scenery 里显示哪一组） */
     if (el.stage) {
       el.stage.setAttribute('data-region', r.id);

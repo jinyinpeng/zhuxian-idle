@@ -3243,3 +3243,98 @@ button:active:not(:disabled) { filter: brightness(.9); }
   .brand-title { font-size: 29px; letter-spacing: .26em; text-indent: .26em; }
 }
 
+/* =========================================================================
+   v28 · 场景真实感  ——  让背景从「矢量图形」变成「有材质的实景」
+   -------------------------------------------------------------------------
+   原来的场景由 clip-path 多边形 + 纯色渐变拼成，不像真实风景有三个原因：
+     ① 山脊边缘是 13 个顶点连成的折线，笔直 → 像几何图形，不像山体
+     ② 远中近三层一样锐利、一样饱和 → 没有空间纵深，像贴纸
+     ③ 表面零纹理，大面积平涂 → 缺"材质感"，这是 CSS 渐变最典型的塑料感
+   对应三招（全部零网络请求，噪波用内联 SVG feTurbulence）：
+     ② 空气透视：远山模糊 + 去饱和 + 提亮，近山保持锐利
+     ③ 地形噪波：给山体叠一层被压扁的多倍频噪波，模拟岩层起伏
+     ④ 胶片颗粒 + 大气雾 + 体积光：消除渐变的塑料感
+   另外接入真实背景图：assets/bg_rXX.(jpg|png) 存在即启用，缺失完整回退。
+   ========================================================================= */
+
+/* ---------- ① 真实背景图（存在才显示，缺失时完全不影响 CSS 场景） ---------- */
+.bg-photo {
+  position: absolute; inset: 0;
+  width: 100%; height: 100%;
+  object-fit: cover;
+  object-position: center 40%;   /* 多留天、少留地，主角站位更稳 */
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity .55s var(--ease);
+}
+.stage.has-photo .bg-photo { opacity: 1; }
+
+/* 有实景图时，上面那套几何场景整体让位；
+   雾气 / 分级 / 暗角 / 颗粒 / 光柱 / 前景剪影保留下来做统一调色，
+   让照片和 UI、日夜主题是同一套色彩语言。 */
+.stage.has-photo .clouds,
+.stage.has-photo .stars,
+.stage.has-photo .moon,
+.stage.has-photo .hill,
+.stage.has-photo .ridge,
+.stage.has-photo .ridge-x1,
+.stage.has-photo .ridge-x2,
+.stage.has-photo .ground,
+.stage.has-photo .cloudsea,
+.stage.has-photo .scenery { display: none; }
+
+/* 夜间：实景图压暗、偏冷、降饱和，与夜间 UI 统一；
+   用 :not([data-mode='day']) 而不是写死 'night'，属性值将来变了也不会失效。 */
+html:not([data-mode='day']) .bg-photo {
+  filter: brightness(.5) saturate(.76) contrast(1.08) hue-rotate(-8deg);
+}
+
+/* ---------- ② 空气透视：远山虚、近山实 ---------- */
+.ridge-x2   { filter: blur(4.4px) saturate(.48) brightness(1.12); }
+.ridge-x1   { filter: blur(3.2px) saturate(.58) brightness(1.06); }
+.ridge-far  { filter: blur(2.4px) saturate(.66) brightness(1.06); }
+.ridge-mid  { filter: blur(1.2px) saturate(.8); }
+.ridge-near { filter: blur(.4px) saturate(.96); }
+.fg         { filter: blur(.7px); }
+
+/* ---------- ③ 地形噪波：山体从「平涂」变「岩面」 ----------
+   频次刻意压扁（.03 .07）→ 横纹多于竖纹，接近岩层/植被的走向。
+   .ridge 带 will-change: transform，本身就是独立层，混色不会溢到天空上。 */
+.ridge::before {
+  content: '';
+  position: absolute; inset: 0;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='t'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.03 .07' numOctaves='4' seed='11'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='200' height='200' filter='url(%23t)'/%3E%3C/svg%3E");
+  background-size: 186px 132px;
+  opacity: .58;
+  mix-blend-mode: overlay;
+  pointer-events: none;
+}
+html:not([data-mode='day']) .ridge::before { opacity: .42; }
+
+/* ---------- ④ 胶片颗粒：消除 CSS 渐变的塑料感 ----------
+   放在 .grade2 上（在场景之上、单位与 UI 之下）——
+   照片/背景有颗粒感，角色和文字依旧干净锐利。 */
+.grade2::before {
+  content: '';
+  position: absolute; inset: 0;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23g)'/%3E%3C/svg%3E");
+  background-size: 132px 132px;
+  opacity: .3;
+  mix-blend-mode: overlay;
+  pointer-events: none;
+}
+html[data-mode='day'] .grade2::before { opacity: .2; mix-blend-mode: soft-light; }
+
+/* ---------- ⑤ 大气雾与体积光 ---------- */
+.haze { filter: blur(15px); }
+.haze.z2 { filter: blur(21px); }
+/* screen 让光变成"加法"，更像真实的光而非一层白灰 */
+.shaft { mix-blend-mode: screen; }
+
+/* ---------- ⑥ 地面与地平线：补一层贴地大气 ---------- */
+.ground {
+  background:
+    radial-gradient(ellipse 130% 62% at 50% 0%, rgba(214,255,246,.075), transparent 62%),
+    linear-gradient(180deg, rgba(255,255,255,.05) 0%, rgba(0,0,0,.2) 34%, rgba(0,0,0,.44) 100%);
+}
+
