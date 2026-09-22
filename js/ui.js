@@ -503,6 +503,7 @@
          原来是 slice(0, 30)，玩家掉到第 31 名时榜上根本看不到自己，
          标题却写着「你的排名 31」—— 对不上号。 */
       body += list.map(row).join('');
+      body += '<div class="cp-hint">榜上修士同样在修行，只是进度慢于你 —— 持续挂机即可逐级向上。</div>';
     } else if (tab === 'friend') {
       body += '<div class="section-title">' + ic('users', 'ic-xs') + ' 好友 · ' + s.friends.length + ' 人</div>';
       body += s.friends.map(f =>

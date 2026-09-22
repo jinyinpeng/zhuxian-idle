@@ -996,6 +996,13 @@
         f.level = clamp(f.level, 1, D.MAX_LEVEL);
         if (Math.random() < 0.25) f.online = Math.random() < 0.55;
       });
+
+      /* 榜上修士也在修行，但进度比玩家慢：相对修为差逐时收窄，
+         所以「名次」真的会随投入的时间往上走（追上榜首大约需要一天）。
+         若让 gap 永远不动，玩家就只能永远停在同一个名次 —— 榜单成了纯装饰。 */
+      G.rank.forEach((r, i) => {
+        if (r.gap > -30 && Math.random() < (i < 5 ? 0.0006 : 0.0015)) r.gap -= 1;
+      });
     }
   }
 
