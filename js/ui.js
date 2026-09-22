@@ -87,7 +87,7 @@
     const st = G.stats();
     el.topbar.innerHTML =
       '<div class="tb-row1">' +
-        '<div class="tb-avatar" data-act="lv" role="button" aria-label="境界一览" data-lv="' + s.level + '" style="color:' + sect.color + '">' +
+        '<div class="tb-avatar" data-act="lv" role="button" aria-label="角色属性" data-lv="' + s.level + '" style="color:' + sect.color + '">' +
           FIG.hero(sect.id, (s.gender || 'male')) +
         '</div>' +
         '<div class="tb-main">' +
@@ -510,7 +510,9 @@
       body += '<div class="section-title" style="margin-top:16px">' + ic('gift', 'ic-xs') + ' 说明</div>' +
         '<div style="font-size:11.5px;color:#78716c;line-height:1.75">每位好友每日可赠礼一次，赠礼可获得元宝与金币回馈。好友等级会随修行自行提升。</div>';
     } else {
-      const st = G.stats();
+      /* 修行统计取的是累计计数，来自存档 st.stats；
+         此前误写成 G.stats()（战斗属性），导致时长/击杀等全渲染成 NaN 与 0 */
+      const st = s.stats;
       body += '<div class="section-title">' + ic('trending-up', 'ic-xs') + ' 修行统计</div>';
       const rows = [
         ['修行时长', G.fmtTime(st.playTime)],
@@ -722,9 +724,15 @@
         const on = G.toggleAuto();
         R.toast(on ? '继续挂机' : '已暂停挂机', on ? 'jade' : 'bad');
         renderTop();
+        if (modalKind === 'char') openCharPanel(charTab);   /* 在角色面板里切换 → 同步刷新 */
         break;
       }
-      case 'lv': openLevelTip(); break;
+      /* 点击头像：面板已开则收起，否则展开 —— 一触即显示 / 隐藏 */
+      case 'lv': {
+        if (el.modal.classList.contains('on') && modalKind === 'char') closeModal();
+        else openCharPanel(charTab);
+        break;
+      }
     }
   }
 
@@ -739,8 +747,10 @@
 
   /* ============================ 弹窗 ============================ */
   let modalButtons = [];
+  let modalKind = '';        /* 当前弹窗类型：供「再点一次头像即收起」这类切换逻辑判断 */
   function openModal(opt) {
     modalButtons = opt.buttons || [{ label: '知道了', cls: 'gold' }];
+    modalKind = opt.kind || '';
     el.modal.innerHTML = '<div class="modal">' +
       '<div class="modal-head">' +
         '<div class="modal-title">' + (opt.title || '') + '</div>' +
@@ -760,7 +770,7 @@
     });
     el.modal.classList.add('on');
   }
-  function closeModal() { el.modal.classList.remove('on'); }
+  function closeModal() { el.modal.classList.remove('on'); modalKind = ''; }
 
   function openStats() {
     UI.tab.social = 'stat';
@@ -1119,6 +1129,262 @@
     });
   }
 
+  /* ============================ 角色属性面板 ============================
+     入口：点击顶栏头像（.tb-avatar[data-act="lv"]）。
+     点一次展开、再点一次收起；面板内四个页签切换不关闭弹窗。 */
+  let charTab = 'attr';
+  const CHAR_TABS = [
+    { id: 'attr', name: '属性' },
+    { id: 'gear', name: '装备' },
+    { id: 'skill', name: '功法' },
+    { id: 'state', name: '状态' }
+  ];
+
+  /* 一条带进度条的数值（气血 / 内力 / 修为 / 妖物气血） */
+  function charBar(label, cur, max, cls) {
+    const r = (max > 0 && isFinite(max)) ? Math.max(0, Math.min(1, cur / max)) : 0;
+    return '<div class="cp-bar">' +
+      '<span class="cp-bar-k">' + label + '</span>' +
+      '<span class="cp-bar-t ' + cls + '"><i style="width:' + (r * 100).toFixed(1) + '%"></i></span>' +
+      '<span class="cp-bar-v">' + G.fmt(cur) + ' / ' + G.fmt(max) + '</span>' +
+      '</div>';
+  }
+
+  /* 头部：立绘 + 道号 / 境界 / 门派 + 气血内力条 */
+  function charHeadBlock() {
+    const s = G.state;
+    const sect = G.sectOf(s.sect);
+    const st = G.stats();
+    return '<div class="char-head">' +
+        '<div class="char-portrait" style="color:' + sect.color + '">' +
+          FIG.hero(sect.id, s.gender || 'male') +
+        '</div>' +
+        '<div class="char-info">' +
+          '<div class="char-name">' + esc(s.name) + '<span class="tb-guild">' + esc(s.guild) + '</span></div>' +
+          '<div class="char-sub">' + esc(G.realmName(s.level)) + ' · Lv.' + s.level +
+            ' · ' + esc(sect.name) + ' · ' + (s.gender === 'female' ? '女' : '男') + '</div>' +
+          '<div class="char-power">' + ic('zap', 'ic-xs') + ' 战力 ' + G.fmt(st.power) + '</div>' +
+        '</div>' +
+      '</div>' +
+      charBar('气血', st.hp * s.hp, st.hp, 'hp') +
+      charBar('内力', st.maxMp * s.mp, st.maxMp, 'mp');
+  }
+
+  function charAttrTab() {
+    const s = G.state;
+    const st = G.stats();
+    const sect = G.sectOf(s.sect);
+    const need = G.expNeed(s.level);
+    const er = (!isFinite(need) || need <= 0) ? 1 : Math.min(1, s.exp / need);
+    const usedPot = Object.keys(s.pot).reduce((a, k) => a + s.pot[k], 0);
+    const leftPot = Math.max(0, s.level - 1 - usedPot);
+
+    let b = '<div class="section-title">' + ic('scroll-text', 'ic-xs') + ' 基础信息</div>';
+    const base = [
+      ['道号', esc(s.name)],
+      ['等级', 'Lv.' + s.level + ' / ' + D.MAX_LEVEL],
+      ['境界', esc(G.realmName(s.level))],
+      ['门派', esc(sect.name) + ' · ' + esc(sect.tag)],
+      ['性别', s.gender === 'female' ? '女' : '男'],
+      ['公会', esc(s.guild)],
+      ['可用潜能', G.fmt(leftPot) + ' 点'],
+      ['修行时长', G.fmtTime(s.stats.playTime)]
+    ];
+    b += base.map(r => '<div class="stat-line"><span class="k">' + r[0] + '</span><span class="v">' + r[1] + '</span></div>').join('');
+
+    b += '<div class="section-title" style="margin-top:14px">' + ic('target', 'ic-xs') + ' 战斗属性</div>';
+    const props = [
+      ['攻击', G.fmt(st.atk)], ['气血上限', G.fmt(st.hp)], ['防御', G.fmt(st.def)],
+      ['内力上限', G.fmt(st.maxMp)], ['暴击率', (st.crit * 100).toFixed(1) + '%'],
+      ['暴击伤害', (st.critDmg * 100).toFixed(0) + '%'], ['闪避率', (st.dodge * 100).toFixed(1) + '%'],
+      ['攻击速度', (st.spd * 100).toFixed(0) + '%'], ['攻速间隔', st.atkInterval.toFixed(2) + ' 秒'],
+      ['吸血', (st.lifesteal * 100).toFixed(1) + '%'], ['减伤', (st.damageCut * 100).toFixed(0) + '%'],
+      ['技能增伤', (st.skillDmg * 100 - 100).toFixed(0) + '%'],
+      ['气血回复', (st.hpRegen * 100).toFixed(1) + '%/秒'], ['内力回复', G.fmt(st.mpRegen) + '/秒']
+    ];
+    b += props.map(r => '<div class="stat-line"><span class="k">' + r[0] + '</span><span class="v">' + r[1] + '</span></div>').join('');
+
+    b += '<div class="section-title" style="margin-top:14px">' + ic('award', 'ic-xs') + ' 修为进度</div>';
+    b += charBar('修为', s.exp, need, 'exp');
+    b += '<div class="stat-line"><span class="k">本次境界</span><span class="v">Lv.' +
+      (G.tierOf(s.level) * D.TIER_SIZE + 1) + ' - ' + ((G.tierOf(s.level) + 1) * D.TIER_SIZE) + '</span></div>';
+    b += '<div class="stat-line"><span class="k">门派被动</span><span class="v">【' + esc(sect.passive.name) + '】' + esc(sect.passive.desc) + '</span></div>';
+    b += '<button class="btn sm" style="width:100%;margin-top:8px" data-ctab="level">' +
+      ic('award', 'ic-xs') + ' 查看境界阶梯</button>';
+    return b;
+  }
+
+  function charGearTab() {
+    const s = G.state;
+    let total = 0, cnt = 0;
+    const rows = D.SLOTS.map(sl => {
+      const it = s.equipped[sl.id];
+      if (!it) {
+        return '<div class="cp-eq empty">' +
+          '<div class="cp-eq-ic">' + ic(sl.icon) + '</div>' +
+          '<div class="cp-eq-main">' +
+            '<div class="cp-eq-name">未着装备</div>' +
+            '<div class="cp-eq-stat">' + sl.name + '</div>' +
+          '</div></div>';
+      }
+      const q = G.qualityOf(it);
+      const affixTx = (it.affixes || []).map(a => {
+        const def = D.AFFIXES.find(x => x.key === a.key);
+        return (def ? def.name : a.key) + ' +' + (a.value * (1 + it.enh * 0.04) * 100).toFixed(1) + '%';
+      }).join(' · ');
+      total += G.itemPower(it); cnt++;
+      return '<div class="cp-eq">' +
+        '<div class="cp-eq-ic" style="color:' + q.color + '">' + ic(sl.icon) +
+          (it.enh > 0 ? '<span class="cp-enh">+' + it.enh + '</span>' : '') + '</div>' +
+        '<div class="cp-eq-main">' +
+          '<div class="cp-eq-name" style="color:' + q.color + '">' + esc(it.name) + '</div>' +
+          '<div class="cp-eq-stat">' + q.name + ' · ' + sl.name + ' · 等阶 ' + it.ilvl +
+            ' · ' + MAIN_STAT_NAME[it.main.key] + ' +' + G.fmt(it.main.value * (1 + it.enh * 0.08)) + '</div>' +
+          (affixTx ? '<div class="cp-eq-affix">' + affixTx + '</div>' : '') +
+        '</div>' +
+        '<div class="cp-eq-score">' + G.fmt(G.itemPower(it)) + '</div>' +
+        '</div>';
+    }).join('');
+
+    let b = '<div class="section-title">' + ic('shield', 'ic-xs') + ' 已着装备 · ' + cnt + ' / ' + D.SLOTS.length + '</div>';
+    b += '<div class="offline-grid" style="margin-bottom:10px">' +
+      '<div class="offline-cell"><div class="oc-val">' + G.fmt(total) + '</div><div class="oc-lab">装备总评分</div></div>' +
+      '<div class="offline-cell"><div class="oc-val">' + cnt + ' / ' + D.SLOTS.length + '</div><div class="oc-lab">已着部位</div></div>' +
+      '</div>';
+    b += rows;
+    b += '<div class="cp-hint">在「行囊」面板可更换、卸下、强化与出售装备。</div>';
+    return b;
+  }
+
+  function charSkillTab() {
+    const s = G.state;
+    const sect = G.sectOf(s.sect);
+    const maxSk = maxSkillLv();
+    let b = '<div class="section-title">' + ic('sparkles', 'ic-xs') + ' 门派功法 · ' + esc(sect.name) + '</div>';
+    D.SKILL_TEMPLATES.forEach((t, i) => {
+      const lv = s.skills[t.key] || 0;
+      const unlocked = s.level >= t.unlock;
+      const nm = sect.skillNames[i] || ['未知', ''];
+      const typeTx = { single: '单体', aoe: '多段', buff: '增益', ult: '绝技' }[t.type] || '单体';
+      const ratio = t.ratio * (1 + Math.max(0, lv - 1) * 0.20);
+      let meta = '<span>' + typeTx + '</span>';
+      if (t.ratio) meta += '<span>倍率 ' + ratio.toFixed(1) + '×</span>';
+      else if (t.buff) meta += '<span>攻击 +' + Math.round(t.buff.atkPct * 100) + '%</span>';
+      if (t.hits > 1) meta += '<span>' + t.hits + ' 段</span>';
+      meta += '<span>冷却 ' + t.cd.toFixed(1) + 's</span><span>耗蓝 ' + t.mp + '</span>';
+
+      b += '<div class="cp-skill' + (unlocked ? '' : ' locked') + '">' +
+        '<div class="cp-sk-ic" style="color:' + sect.color + '">' +
+          ic(['sword', 'flame', 'sun', 'sparkles', 'crown'][i] || 'sparkles') + '</div>' +
+        '<div class="cp-sk-main">' +
+          '<div class="cp-sk-name">' + esc(nm[0]) +
+            '<span class="lv-tag">' + (lv ? 'Lv.' + lv : '未修') + '</span>' +
+            (unlocked ? '' : '<span class="lv-tag lock">Lv.' + t.unlock + ' 解锁</span>') +
+          '</div>' +
+          '<div class="cp-sk-desc">' + esc(nm[1]) + '</div>' +
+          '<div class="cp-sk-meta">' + meta + '</div>' +
+        '</div></div>';
+    });
+    b += '<div class="cp-hint">在「功法」面板可提升功法等级（当前上限 Lv.' + maxSk + '），并分配潜能点。</div>';
+    return b;
+  }
+
+  function charStateTab() {
+    const s = G.state;
+    const C = G.combat;
+    const reg = G.regionOf(s.region);
+    const mob = C && C.mob;
+    const sect = G.sectOf(s.sect);
+    const usedPot = Object.keys(s.pot).reduce((a, k) => a + s.pot[k], 0);
+    const leftPot = Math.max(0, s.level - 1 - usedPot);
+
+    let b = '<div class="section-title">' + ic('activity', 'ic-xs') + ' 当前状态</div>';
+    b += '<div class="cp-chips">' +
+      '<span class="cp-chip' + (s.auto ? ' on' : ' off') + '">' + ic(s.auto ? 'play' : 'pause') +
+        (s.auto ? '挂机中' : '已暂停') + '</span>' +
+      '<span class="cp-chip">' + ic('map-pin') + esc(reg.name) + '</span>' +
+      (s.autoRegion !== false ? '<span class="cp-chip">' + ic('refresh-cw') + '自动择地</span>' : '') +
+      (s.settings && s.settings.autoEquip !== false ? '<span class="cp-chip">' + ic('shield') + '自动装备</span>' : '') +
+      '</div>';
+    b += '<div class="stat-line"><span class="k">当前妖物</span><span class="v">' +
+      (mob ? esc(mob.name) + ' Lv.' + mob.lv + (mob.elite ? ' · 妖将' : '') : '寻觅中…') + '</span></div>';
+    if (mob) b += charBar('妖物气血', Math.max(0, C.mobHp), Math.max(1, mob.maxHp), 'mob');
+
+    b += '<div class="section-title" style="margin-top:14px">' + ic('zap', 'ic-xs') + ' 生效中的效果</div>';
+    let fx = '';
+    if (C && C.buff && C.buff.t > 0) {
+      fx += '<div class="cp-fx buff">' + ic('arrow-up') +
+        '<span class="cp-fx-main">攻势大涨 · 攻击 +' + Math.round(C.buff.v * 100) + '%</span>' +
+        '<span class="cp-fx-t">' + C.buff.t.toFixed(1) + 's</span></div>';
+    }
+    if (C && C.burn && C.burn.t > 0) {
+      fx += '<div class="cp-fx bad">' + ic('flame') +
+        '<span class="cp-fx-main">灼烧 · 持续伤害' + (C.burn.dmg ? ' ' + G.fmt(C.burn.dmg) + '/段' : '') + '</span>' +
+        '<span class="cp-fx-t">' + C.burn.t.toFixed(1) + 's</span></div>';
+    }
+    fx += '<div class="cp-fx good">' + ic('sparkles') +
+      '<span class="cp-fx-main">【' + esc(sect.passive.name) + '】' + esc(sect.passive.desc) + '</span></div>';
+    if (!s.auto) {
+      fx += '<div class="cp-fx off">' + ic('pause') +
+        '<span class="cp-fx-main">挂机已暂停 · 修为与掉落均不再增长</span></div>';
+    }
+    if (s.hp <= 0.25) {
+      fx += '<div class="cp-fx bad">' + ic('heart') +
+        '<span class="cp-fx-main">气血低迷 · 即将力竭倒地</span></div>';
+    }
+    b += fx;
+
+    b += '<div class="section-title" style="margin-top:14px">' + ic('trending-up', 'ic-xs') + ' 成长进度</div>';
+    b += '<div class="offline-grid">' +
+      '<div class="offline-cell"><div class="oc-val">' + G.fmt(leftPot) + '</div><div class="oc-lab">可用潜能</div></div>' +
+      '<div class="offline-cell"><div class="oc-val">' + G.fmt(s.stats.levelUps) + '</div><div class="oc-lab">等级提升</div></div>' +
+      '<div class="offline-cell"><div class="oc-val">' + G.fmt(s.stats.kills) + '</div><div class="oc-lab">累计斩杀</div></div>' +
+      '<div class="offline-cell"><div class="oc-val">' + (s.stats.killRate * 60).toFixed(1) + '</div><div class="oc-lab">只 / 分钟</div></div>' +
+      '</div>';
+
+    b += '<div class="cp-acts">' +
+      '<button class="btn ' + (s.auto ? '' : 'jade') + ' sm" data-act="auto">' +
+        ic(s.auto ? 'pause' : 'play') + (s.auto ? '暂停挂机' : '继续挂机') + '</button>' +
+      '<button class="btn sm" data-ctab="level">' + ic('award', 'ic-xs') + ' 境界一览</button>' +
+      '<button class="btn sm" data-act="settings">' + ic('settings', 'ic-xs') + ' 设置</button>' +
+      '</div>';
+    return b;
+  }
+
+  function openCharPanel(tab) {
+    if (CHAR_TABS.some(t => t.id === tab)) charTab = tab;
+    const s = G.state;
+    const body =
+      charHeadBlock() +
+      '<div class="seg cp-tabs">' +
+        CHAR_TABS.map(t => '<button class="tab' + (t.id === charTab ? ' on' : '') +
+          '" data-ctab="' + t.id + '">' + t.name + '</button>').join('') +
+      '</div>' +
+      '<div class="cp-body">' +
+        (charTab === 'gear' ? charGearTab()
+          : charTab === 'skill' ? charSkillTab()
+            : charTab === 'state' ? charStateTab()
+              : charAttrTab()) +
+      '</div>';
+
+    openModal({
+      kind: 'char',
+      title: '角色属性',
+      sub: esc(s.name) + ' · ' + esc(G.sectOf(s.sect).name),
+      body: body,
+      buttons: [{ label: '关闭', cls: 'gold' }]
+    });
+
+    /* 页签切换：重绘面板而不关闭弹窗 */
+    el.modal.querySelectorAll('[data-ctab]').forEach(n => {
+      n.addEventListener('click', () => {
+        const v = n.getAttribute('data-ctab');
+        if (v === 'level') { openLevelTip(); return; }
+        openCharPanel(v);
+      });
+    });
+  }
+
   /* ============================ 境界一览 ============================ */
   function openLevelTip() {
     const s = G.state;
@@ -1184,8 +1450,8 @@
   /* ============================ 对外 ============================ */
   global.UI = {
     init, openSheet, closeSheet, openModal, closeModal, openRegion,
-    openSettings, openOffline, openStats, openLevelTip, renderSheet, renderTop,
-    softRefresh, maxSkillLv, esc
+    openSettings, openOffline, openStats, openLevelTip, openCharPanel,
+    renderSheet, renderTop, softRefresh, maxSkillLv, esc
   };
   G.__maxSkillLv = maxSkillLv;
 })(window);
