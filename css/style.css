@@ -33,13 +33,57 @@
   --glass: rgba(20, 17, 15, .72);
   --glass-2: rgba(12, 10, 9, .9);
 
+  /* ---- 圆角（一份尺度，不再随手写像素） ---- */
+  --r-xs: 6px;
   --r-sm: 8px;
   --r: 12px;
   --r-lg: 18px;
   --r-xl: 24px;
+  --r-pill: 999px;
 
-  --serif: "Songti SC", "STSong", "Noto Serif SC", "Source Han Serif SC", Georgia, serif;
-  --sans: -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", "Hiragino Sans GB", "Segoe UI", Roboto, sans-serif;
+  /* ---- 间距：竖屏留白节奏统一走这 7 档 ---- */
+  --sp-1: 4px;  --sp-2: 7px;  --sp-3: 10px;
+  --sp-4: 14px; --sp-5: 18px; --sp-6: 24px; --sp-7: 32px;
+
+  /* ---- 字号 / 行高 / 字重：层级只留这几档，避免出现 9 / 11.5 / 12.5 / 13.5 这种随手值 ---- */
+  --fs-2xs: 10px; --fs-xs: 11px; --fs-sm: 12px;
+  --fs-md: 13px;  --fs-lg: 15px; --fs-xl: 17px; --fs-2xl: 22px;
+  --lh-tight: 1.3; --lh: 1.55; --lh-loose: 1.8;
+  --fw-n: 400; --fw-m: 600; --fw-b: 700; --fw-x: 800;
+
+  /* ---- 投影：三级抬升（贴片 / 卡片 / 浮层） ---- */
+  --sh-1: 0 1px 2px rgba(0, 0, 0, .34);
+  --sh-2: 0 8px 22px -10px rgba(0, 0, 0, .62);
+  --sh-3: 0 22px 52px -18px rgba(0, 0, 0, .72);
+
+  /* ---- 动效：曲线与时长统一，全局手感一致 ---- */
+  --ease: cubic-bezier(.22, .61, .36, 1);
+  --dur: .18s;
+  --dur-slow: .32s;
+  --ring: rgba(250, 204, 21, .55);
+
+  /* ---- 语义别名：把「色阶」映射成「用途」 ----
+     只引用 --s* 与品牌色，日间模式反转色阶时自动跟随，无需第二份定义。 */
+  --text-1: var(--s200);      /* 主文字：标题、关键数值 */
+  --text-2: var(--s400);      /* 次文字：正文、描述 */
+  --text-3: var(--s500);      /* 弱文字：标签、单位、轴注释 */
+  --text-4: var(--s600);      /* 最弱：脚注、时间戳 */
+  --surface-1: var(--s880);   /* 卡片面 */
+  --surface-2: var(--s850);   /* 卡片内的次级块 */
+  --stroke: var(--line-2);    /* 常规描边 */
+  --stroke-strong: var(--line);
+  --ok: var(--jade);
+  --warn: var(--orange);
+  --danger: var(--blood);
+  --info: var(--blue);
+
+  /* ---- 字体：标题走宋体系（仙侠气质），正文走系统无衬线（清晰、零加载） ----
+     中日韩衬线把 Noto / 思源排在 Georgia 之前，避免 Windows 回退到点阵宋体。 */
+  --serif: "Songti SC", "Noto Serif SC", "Source Han Serif SC", "Source Han Serif CN",
+           "Noto Serif CJK SC", "STSong", Georgia, "Times New Roman", serif;
+  --sans: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "PingFang SC",
+          "HarmonyOS Sans SC", "MiSans", "Noto Sans SC", "Source Han Sans SC",
+          "Microsoft YaHei", "Hiragino Sans GB", "Segoe UI", Roboto, sans-serif;
 
   --safe-t: env(safe-area-inset-top, 0px);
   --safe-b: env(safe-area-inset-bottom, 0px);
@@ -969,9 +1013,9 @@ html, body { overscroll-behavior-y: auto; }
   animation: skBeam .42s ease-out forwards;
 }
 @keyframes skBeam {
-  0% { opacity: 0; transform: translate(-50%, -50%) rotate(var(--a)) scaleX(.2); }
+  0% { opacity: 0; transform: translate(-50%, -50%) rotate(var(--a, 0deg)) scaleX(.2); }
   30% { opacity: 1; }
-  100% { opacity: 0; transform: translate(-50%, -50%) rotate(var(--a)) scaleX(1.5); }
+  100% { opacity: 0; transform: translate(-50%, -50%) rotate(var(--a, 0deg)) scaleX(1.5); }
 }
 /* 鬼王宗 · 血爪 */
 .sk-claw {
@@ -994,7 +1038,7 @@ html, body { overscroll-behavior-y: auto; }
 @keyframes petalFly {
   0% { opacity: 0; transform: translate(-50%, -50%) scale(.4) rotate(0deg); }
   20% { opacity: 1; }
-  100% { opacity: 0; transform: translate(calc(-50% + var(--dx)), calc(-50% + var(--dy))) rotate(220deg) scale(1.15); }
+  100% { opacity: 0; transform: translate(calc(-50% + var(--dx, 0px)), calc(-50% + var(--dy, 0px))) rotate(220deg) scale(1.15); }
 }
 /* 天音寺 · 佛光涟漪 */
 .sk-ring {
@@ -3047,5 +3091,162 @@ html[data-mode='day'] .cp-sk-ic > .ic {
 /* ---- 老 iOS 无 dvh：用 JS 写入的 --vh 兜底，避免地址栏吃掉底部导航 ---- */
 @supports not (height: 100dvh) {
   html, body, #app { height: calc(var(--vh, 1vh) * 100); }
+}
+
+/* =========================================================================
+   v27 · 设计系统统一层  ——  现代 / 简洁 / 一致
+   -------------------------------------------------------------------------
+   为什么不逐条改写上面的组件规则：组件规则数量庞大，逐条改动回归面极大。
+   本层只做三件事，且选择器刻意保持低权重（裸类名 / 元素名）：
+
+     ① 补齐「基元」：全站此前没有焦点环、选中色、禁用态、指针悬停 —— 桌面端
+        基本没有交互反馈，键盘用户也看不到焦点。
+     ② 把发散的值收敛到 token：间距、字号、行高、数字对齐。
+     ③ 桌面端单独编排：原来是「纯黑底中间一竖条」，现在是带环境光的舞台。
+
+   权重说明：日间模式的规则都带 html[data-mode='day'] 前缀，权重更高，
+   因此本层与日间模式不会互相覆盖，两套主题共用同一套基元。
+   ========================================================================= */
+
+/* ---------- ① 全局基元：文本选择 / 焦点环 / 输入 / 禁用态 ---------- */
+html { -webkit-text-size-adjust: 100%; }
+
+::selection { background: rgba(250, 204, 21, .26); color: var(--text-1); }
+
+/* 用 outline 而非 box-shadow：不覆盖按钮自身的光晕 */
+:focus-visible { outline: 2px solid var(--ring); outline-offset: 2px; }
+
+input, textarea { caret-color: var(--gold); }
+input::placeholder { color: var(--text-4); }
+
+button, [role='button'], a { -webkit-tap-highlight-color: transparent; }
+button:disabled, input:disabled, [disabled] {
+  opacity: .42;
+  cursor: not-allowed;
+  filter: saturate(.35);
+}
+
+/* ---------- ② 交互反馈：按下 / 悬停 / 过渡，全站同一手感 ---------- */
+/* 只声明过渡本身；各组件更具体的 transition（如 .btn 的 transform）依然优先 */
+button {
+  transition: filter .12s var(--ease), opacity var(--dur) var(--ease),
+              color var(--dur) var(--ease), border-color var(--dur) var(--ease),
+              background-color var(--dur) var(--ease);
+}
+button:active:not(:disabled) { filter: brightness(.9); }
+
+/* 悬停只在真有指针的设备上生效，避免手机点完后残留高亮 */
+@media (hover: hover) and (pointer: fine) {
+  button:not(:disabled):hover { filter: brightness(1.14); }
+  .btn:hover { transform: translateY(-1px); }
+  .tb-btn:hover, .sheet-close:hover, .nav-btn:hover { background: rgba(255, 255, 255, .07); }
+  .sect-chip:hover, .drop-card:hover, .eq-slot:hover, .bag-cell:hover,
+  .rank-row:hover, .friend-row:hover, .quest-item:hover {
+    border-color: rgba(250, 204, 21, .34);
+  }
+}
+
+/* ---------- ③ 可读性：数字等宽、长文行高、正文呼吸 ---------- */
+.stat-line .v, .affix-line .v, .offline-cell .oc-val, .res, .rank-val, .lv-sub,
+.cp-bar-v, .cp-eq-score, .tier-row .t-rng, .oc-lab, .mono, .stat-diff {
+  font-variant-numeric: tabular-nums;
+}
+.modal-body, .sheet-body { line-height: var(--lh); }
+.cp-hint, .si-desc, .ac-tip, .tip, .q-desc { line-height: var(--lh-loose); }
+
+/* ---------- ④ 层级收敛：标题 / 分区 / 列表行，节奏一致 ---------- */
+.section-title {
+  margin: var(--sp-4) 0 var(--sp-2);
+  font-weight: var(--fw-m);
+  letter-spacing: .14em;
+}
+.section-title:first-child { margin-top: var(--sp-1); }
+
+/* 列表行：图标与文字之间统一 10px，右侧数值不再贴边 */
+.rank-row, .friend-row, .quest-item, .drop-card, .skill-item, .cp-eq, .cp-skill, .cp-fx {
+  gap: var(--sp-3);
+}
+
+/* ---------- ⑤ 面板留白：抽屉与弹窗的四周对齐，内容不再顶到边 ---------- */
+.sheet-tabs { padding: var(--sp-3) var(--sp-5) 0; }
+.sheet-body { padding: var(--sp-3) var(--sp-5) var(--sp-5); }
+.modal-head { padding: var(--sp-4) var(--sp-5) var(--sp-3); }
+.modal-body { padding: var(--sp-4) var(--sp-5); }
+.modal-foot { padding: var(--sp-3) var(--sp-5) var(--sp-5); }
+
+/* ---------- ⑥ 品牌：标题下的金色细线，与图标一起构成固定印记 ---------- */
+.brand::after {
+  content: '';
+  display: block;
+  width: 68px; height: 1px;
+  margin: var(--sp-4) auto 0;
+  background: linear-gradient(90deg, transparent, rgba(250, 204, 21, .6), transparent);
+}
+
+/* =========================================================================
+   ⑦ 桌面端编排（>= 560px）
+   竖屏优先是游戏本体，但桌面浏览器不该是「黑底中间一条」：
+     · 页面加上金 / 玉 / 紫三色环境光，把 App 框成一台「掌机」
+     · App 圆角 + 描边 + 三级投影，与背景明确分层
+     · 滚动条加宽到可点，补齐悬停反馈（见 ②）
+   ========================================================================= */
+@media (min-width: 560px) {
+  body {
+    align-items: center;
+    background:
+      radial-gradient(circle at 50% -12%, rgba(250, 204, 21, .10), transparent 46%),
+      radial-gradient(circle at 10% 110%, rgba(20, 184, 166, .10), transparent 54%),
+      radial-gradient(circle at 92% 106%, rgba(167, 139, 250, .09), transparent 50%),
+      #070606;
+  }
+  #app {
+    /* 用 --vh（viewport.js 写入）而非 dvh：避免与上面的 @supports 兜底打架 */
+    height: min(940px, calc(var(--vh, 1vh) * 100 - 40px));
+    border-radius: var(--r-xl);
+    border: 1px solid rgba(255, 255, 255, .08);
+    box-shadow: 0 30px 70px -24px rgba(0, 0, 0, .85), 0 0 0 1px rgba(0, 0, 0, .6);
+  }
+  /* 日间模式：亮底需要单独的背景与描边，权重与原日间规则持平、位置更靠后 */
+  html[data-mode='day'] body {
+    background:
+      radial-gradient(circle at 50% -12%, rgba(202, 138, 4, .16), transparent 48%),
+      radial-gradient(circle at 10% 110%, rgba(13, 148, 136, .14), transparent 54%),
+      #dde6ed;
+  }
+  html[data-mode='day'] #app {
+    border-color: rgba(23, 33, 43, .10);
+    box-shadow: 0 30px 64px -26px rgba(23, 33, 43, .38), 0 0 0 1px rgba(23, 33, 43, .06);
+  }
+
+  /* 滚动条：手机上 3px 够用，鼠标上要能抓到。
+     注意要连具体容器一起写 —— 上面 .sheet-body::-webkit-scrollbar（权重更高）
+     已经把宽度钉成 3px，只写通配符压不住它。 */
+  .sheet-body::-webkit-scrollbar,
+  .modal-body::-webkit-scrollbar,
+  .create-inner::-webkit-scrollbar,
+  *::-webkit-scrollbar { width: 6px; height: 6px; }
+  *::-webkit-scrollbar-thumb { background: rgba(250, 204, 21, .30); border-radius: var(--r-pill); }
+  *::-webkit-scrollbar-thumb:hover { background: rgba(250, 204, 21, .52); }
+  *::-webkit-scrollbar-track { background: transparent; }
+  html[data-mode='day'] *::-webkit-scrollbar-thumb { background: rgba(161, 110, 10, .32); }
+}
+
+/* =========================================================================
+   ⑧ 移动端细节
+   ========================================================================= */
+
+/* 弹窗主操作按钮抬到 44px：拇指可点尺寸，避免「差一点点没按到」 */
+.modal-foot .btn { height: 44px; }
+
+/* 超窄屏（iPhone SE 一代 / 老安卓 320~359px）：
+   不动结构，只收紧留白与顶栏尺寸，保证一行放得下 */
+@media (max-width: 359px) {
+  :root { --sp-5: 14px; --sp-6: 18px; }
+  .tb-avatar { width: 42px; height: 44px; }
+  .tb-avatar .fig { height: 42px; }
+  .tb-avatar::after { right: -4px; }
+  .tb-name { font-size: 13px; }
+  .tab { padding: 4px 8px; }
+  .brand-title { font-size: 29px; letter-spacing: .26em; text-indent: .26em; }
 }
 
