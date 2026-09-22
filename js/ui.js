@@ -486,8 +486,7 @@
     if (tab === 'rank') {
       const list = G.getRank();
       const myIdx = list.findIndex(x => x.me);
-      body += '<div class="section-title">' + ic('trophy', 'ic-xs') + ' 修为榜 · 你的排名 ' + (myIdx + 1) + '</div>';
-      body += list.slice(0, 30).map((r, i) => {
+      const row = (r, i) => {
         const sect = G.sectOf(r.sect);
         return '<div class="rank-row' + (r.me ? ' me' : '') + '">' +
           '<span class="rank-no' + (i < 3 ? ' n' + (i + 1) : '') + '">' + (i + 1) + '</span>' +
@@ -497,7 +496,13 @@
           '</div>' +
           '<span class="rank-val">Lv.' + r.level + '</span>' +
         '</div>';
-      }).join('');
+      };
+      body += '<div class="section-title">' + ic('trophy', 'ic-xs') + ' 修为榜 · 你的排名 ' +
+        (myIdx + 1) + ' / ' + list.length + '</div>';
+      /* 全部列出来（名册 31 行，面板本来就能滚）。
+         原来是 slice(0, 30)，玩家掉到第 31 名时榜上根本看不到自己，
+         标题却写着「你的排名 31」—— 对不上号。 */
+      body += list.map(row).join('');
     } else if (tab === 'friend') {
       body += '<div class="section-title">' + ic('users', 'ic-xs') + ' 好友 · ' + s.friends.length + ' 人</div>';
       body += s.friends.map(f =>

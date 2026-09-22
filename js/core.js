@@ -135,6 +135,7 @@
       },
       quests: { main: { idx: 0, base: 0 }, side: [], daily: { date: '', items: [] } },
       friends: [],
+      rank: [],
       log: [],
       lastSave: Date.now(),
       version: 1
@@ -768,28 +769,56 @@
 
   /* ============================ 朋友 / 排行 ============================ */
   function initSocial() {
-    if (G.friends.length) return;
-    const n = 6;
+    if (!G.friends.length) {
+      const n = 6;
+      for (let i = 0; i < n; i++) {
+        G.friends.push({
+          name: D.FRIEND_NAMES[i % D.FRIEND_NAMES.length],
+          level: clamp(G.level + rndInt(-6, 9), 1, D.MAX_LEVEL),
+          online: Math.random() < 0.55,
+          guild: pick(D.GUILDS),
+          giftAt: 0
+        });
+      }
+    }
+    initRank();
+  }
+
+  /* ---------- 排行榜 ----------
+     原来每次调用 getRank() 都要用 rndInt(-4, 26) 把全部 30 人的等级重掷一遍，
+     名册又不存档 —— 于是每打开一次面板，名次与等级整体变一遍，
+     玩起来就是「这榜单的数据是编的」。
+     改为：名册只在建档时生成一次并写进存档，每人只存「相对修为差 gap」，
+     绝对等级 = 玩家等级 + gap。这样：
+       · 每次打开都是同一张榜（梯队形状固定，不再重掷）
+       · 榜上的人跟着玩家一起成长，不会出现「你 Lv.60、榜上全是 Lv.20」
+       · 玩家的名次稳定可预期 —— 超越谁就是超越谁 */
+  function initRank() {
+    if (!G.rank) G.rank = [];
+    if (G.rank.length) return;
+    const n = D.RANK_NAMES.length;
     for (let i = 0; i < n; i++) {
-      const nm = D.FRIEND_NAMES[i % D.FRIEND_NAMES.length];
-      G.friends.push({
-        name: nm,
-        level: clamp(G.level + rndInt(-6, 9), 1, D.MAX_LEVEL),
-        online: Math.random() < 0.55,
-        guild: pick(D.GUILDS),
-        giftAt: 0
+      /* 榜首领先玩家约 26 级，榜尾落后约 8 级，中间均匀铺开 */
+      const span = n > 1 ? Math.round(i * 34 / (n - 1)) : 0;
+      G.rank.push({
+        name: D.RANK_NAMES[i],
+        gap: 26 - span + rndInt(-2, 2),
+        guild: D.GUILDS[i % D.GUILDS.length],
+        sect: D.SECTS[i % D.SECTS.length].id
       });
     }
   }
   function getRank() {
-    const list = [];
-    const base = G.level;
-    D.RANK_NAMES.forEach((nm, i) => {
-      const lv = clamp(base + rndInt(-4, 26) + Math.floor(i / 3), 1, D.MAX_LEVEL);
-      list.push({ name: nm, level: lv, guild: D.GUILDS[i % D.GUILDS.length], sect: D.SECTS[i % D.SECTS.length].id, me: false });
-    });
+    const list = G.rank.map(r => ({
+      name: r.name,
+      level: clamp(G.level + (r.gap || 0), 1, D.MAX_LEVEL),
+      guild: r.guild,
+      sect: r.sect,
+      me: false
+    }));
     list.push({ name: G.name, level: G.level, guild: G.guild, sect: G.sect, me: true });
-    list.sort((a, b) => b.level - a.level);
+    /* 同级时玩家排前面，名次才不会在同级之间来回跳 */
+    list.sort((a, b) => (b.level - a.level) || (a.me ? -1 : b.me ? 1 : 0));
     return list;
   }
   function giftFriend(name) {
@@ -957,14 +986,25 @@
     if (socialT >= 2) {
       socialT = 0;
       autoQuestTick();
-      // 好友等级跟随
-      G.friends.forEach(f => { if (Math.random() < 0.02) { f.level = clamp(f.level + 1, 1, D.MAX_LEVEL); f.online = Math.random() < 0.55; } });
+      /* 好友各在修行：既会自己突破，也整体跟住玩家的水位 ——
+         只按「+1 / 2% 每 2 秒」慢慢爬（约 36 级/小时）的话，
+         挂机一天就成了「你 Lv.60、好友全停在 Lv.8」，同样是失真画面。 */
+      G.friends.forEach(f => {
+        const want = G.level - rndInt(2, 12);
+        if (f.level < want) f.level += Math.max(1, Math.round((want - f.level) * 0.25));
+        else if (f.level < D.MAX_LEVEL && Math.random() < 0.02) f.level++;
+        f.level = clamp(f.level, 1, D.MAX_LEVEL);
+        if (Math.random() < 0.25) f.online = Math.random() < 0.55;
+      });
     }
   }
 
   /* ============================ 离线收益 ============================ */
   function estimateKillRate() {
-    if (G.stats.killRate > 0.02) return G.stats.killRate;
+    /* 用实测击杀速度（tick 里滚动 8 秒统计的那个）比理论估算准得多。
+       注意要取 G.state.stats；写成 G.stats 会取到 stats 这个函数本身，
+       属性永远 undefined，于是永远走估算分支 —— 以前离线收益就是这么算歪的。 */
+    if (G.state && G.state.stats && G.state.stats.killRate > 0.02) return G.state.stats.killRate;
     const region = regionOf(G.region);
     const m = region.monsters[2];
     const ms = mobStats(m);
