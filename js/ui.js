@@ -103,7 +103,7 @@
         '<span class="res gold">' + ic('coins') + G.fmt(s.res.gold) + '</span>' +
         '<span class="res yuan">' + ic('gem') + G.fmt(s.res.yuanbao) + '</span>' +
         '<span class="res stone">' + ic('sparkles') + G.fmt(s.res.stone) + '</span>' +
-        '<button class="res res-btn" data-act="auto" aria-label="挂机开关" style="color:' + (s.auto ? '#5eead4' : '#78716c') + '">' + ic(s.auto ? 'pause' : 'play') + (s.auto ? '挂机中' : '已暂停') + '</button>' +
+        '<button class="res res-btn' + (s.auto ? ' on' : '') + '" data-act="auto" aria-label="挂机开关">' + ic(s.auto ? 'pause' : 'play') + (s.auto ? '挂机中' : '已暂停') + '</button>' +
       '</div>';
   }
   function hexA(h, a) {

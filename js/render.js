@@ -152,6 +152,9 @@
   function applyMode(node) {
     const mode = isDay() ? 'day' : 'night';
     document.documentElement.setAttribute('data-mode', mode);
+    /* 手机浏览器状态栏配色跟随日/夜，避免亮界面上挂一条深色状态栏 */
+    const mt = document.querySelector('meta[name="theme-color"]');
+    if (mt) mt.setAttribute('content', mode === 'day' ? '#e7eef4' : '#0c0a09');
     if (node || el.stage) (node || el.stage).setAttribute('data-scene-mode', mode);
   }
   function setDayMode(on) {

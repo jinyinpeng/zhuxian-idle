@@ -344,7 +344,8 @@ input { font-family: inherit; }
 .res.gold { color: var(--gold); }
 .res.yuan { color: var(--violet); }
 .res.stone { color: var(--blue); }
-.res-btn { transition: border-color .15s, color .15s; }
+.res-btn { transition: border-color .15s, color .15s; color: #78716c; }
+.res-btn.on { color: #5eead4; }
 .res-btn:active { border-color: rgba(250,204,21,.45); }
 .tb-btns { display: flex; gap: 6px; flex: none; }
 .tb-btn {
@@ -2369,4 +2370,327 @@ html[data-mode='day'] .pillar { background: linear-gradient(90deg, rgba(158,140,
 html[data-mode='day'] .peak { background: linear-gradient(180deg, rgba(190,222,244,.6), rgba(126,158,182,.78)); }
 html[data-mode='day'] .volc { background: linear-gradient(180deg, rgba(158,96,74,.92), rgba(96,54,44,.96)); }
 html[data-mode='day'] .crack { background: linear-gradient(0deg, rgba(251,146,60,.42), transparent 62%), repeating-linear-gradient(74deg, transparent 0 27px, rgba(255,164,86,.26) 27px 29px, transparent 29px 62px); }
+
+/* =========================================================================
+   v26 · 日间模式 · 界面整体明化
+   夜间是「暗底亮字」，日间整体翻转为「亮底深字」：
+     ① 中性色阶反转：--s950 变成最亮的面，--s200 变成最深的主文字
+     ② 半透明黑底 → 白底 + 细描边 + 极轻投影，靠明度差与描边分层
+     ③ 门派色 / 品质色 / 奖励色由 JS 内联写入，夜间那套为深底而选，
+        浅底上普遍偏亮 —— 用 filter 统一压暗，既保色相差异又保对比度
+     ④ 金色 CTA（.btn.gold / .tab.on / .primary-btn）维持原样，
+        延续夜间模式的金玉主调，保证两套主题风格一致
+   ========================================================================= */
+
+/* ① 中性色阶：亮底深字 */
+html[data-mode='day'] {
+  --s950: #e7eef4;
+  --s900: #f5f9fb;
+  --s880: #ffffff;
+  --s850: #ffffff;
+  --s800: #ffffff;
+  --s700: #cbd6de;
+  --s600: #6b7883;
+  --s500: #4f5d67;
+  --s400: #3c4a54;
+  --s300: #25313b;
+  --s200: #131f29;
+  --line: rgba(161, 110, 10, .30);
+  --line-2: rgba(23, 33, 43, .13);
+  --glass: rgba(255, 255, 255, .80);
+  --glass-2: rgba(252, 254, 255, .94);
+}
+html[data-mode='day'] { background: #dde6ed; }
+html[data-mode='day'] body { background: #dde6ed; }
+html[data-mode='day'] #app { box-shadow: 0 0 44px rgba(23,33,43,.18); }
+
+/* ② 顶栏 */
+html[data-mode='day'] .topbar {
+  background: linear-gradient(180deg, #ffffff, #f1f6fa);
+  border-bottom: 1px solid rgba(23,33,43,.10);
+}
+html[data-mode='day'] .tb-name { color: #131f29; }
+html[data-mode='day'] .tb-guild { color: #55636d; border-color: rgba(23,33,43,.16); }
+html[data-mode='day'] .tb-realm { color: #8a5a06; }
+html[data-mode='day'] .tb-avatar {
+  background: radial-gradient(circle at 50% 32%, #ffffff, #dfe9f0 74%);
+  border-color: rgba(23,33,43,.13);
+}
+html[data-mode='day'] .res {
+  background: #ffffff;
+  border-color: rgba(23,33,43,.12);
+  box-shadow: 0 1px 2px rgba(23,33,43,.07);
+}
+html[data-mode='day'] .res.gold { color: #8a5a06; }
+html[data-mode='day'] .res.yuan { color: #6d28d9; }
+html[data-mode='day'] .res.stone { color: #1d4ed8; }
+html[data-mode='day'] .res-btn { color: #6b7883; }
+html[data-mode='day'] .res-btn.on { color: #0f766e; }
+html[data-mode='day'] .tb-btn {
+  background: #ffffff;
+  border-color: rgba(23,33,43,.12);
+  color: #55636d;
+}
+html[data-mode='day'] .tb-btn:active { color: #8a5a06; border-color: rgba(202,138,4,.45); }
+
+/* ③ HUD · 名牌 · 血条 */
+html[data-mode='day'] .region-tag,
+html[data-mode='day'] .hud-pill,
+html[data-mode='day'] .unit .name-plate {
+  background: rgba(255,255,255,.88);
+  border-color: rgba(23,33,43,.14);
+  color: #17222c;
+  box-shadow: 0 2px 7px rgba(23,33,43,.14);
+}
+html[data-mode='day'] .bar-hp,
+html[data-mode='day'] .bar-mp,
+html[data-mode='day'] .bar-exp,
+html[data-mode='day'] .bar-atk {
+  background: rgba(23,33,43,.20);
+  border-color: rgba(23,33,43,.16);
+  box-shadow: inset 0 1px 2px rgba(23,33,43,.18);
+}
+html[data-mode='day'] .bar-hp > span,
+html[data-mode='day'] .bar-exp > span {
+  color: #0d1721; font-weight: 700;
+  text-shadow: 0 1px 0 rgba(255,255,255,.45);
+}
+html[data-mode='day'] .unit .name-plate .lv { color: #8a5a06; }
+
+/* ④ 战斗日志 */
+html[data-mode='day'] .log-line {
+  background: rgba(255,255,255,.86);
+  color: #3c4a54;
+  border-left-color: #9aa8b2;
+  box-shadow: 0 1px 3px rgba(23,33,43,.10);
+}
+html[data-mode='day'] .log-line.t-drop { color: #0f766e; border-left-color: #14b8a6; }
+html[data-mode='day'] .log-line.t-gold { color: #8a5a06; border-left-color: #ca8a04; }
+html[data-mode='day'] .log-line.t-boss { color: #6d28d9; border-left-color: #7c3aed; }
+html[data-mode='day'] .log-line.t-bad  { color: #b91c1c; border-left-color: #dc2626; }
+
+/* ⑤ 仪表盘 · 导航 */
+html[data-mode='day'] .dash {
+  background: linear-gradient(180deg, #f4f9fc, #ffffff);
+  border-top: 1px solid rgba(23,33,43,.10);
+  box-shadow: 0 -6px 18px -12px rgba(23,33,43,.22);
+}
+html[data-mode='day'] .dash-state { color: #0d7a70; }
+html[data-mode='day'] .dash-state.paused { color: #7c8990; }
+html[data-mode='day'] .dash-state.paused .dot { background: #9aa8b2; box-shadow: none; }
+html[data-mode='day'] .nav {
+  background: #ffffff;
+  border-top: 1px solid rgba(23,33,43,.10);
+}
+html[data-mode='day'] .nav-btn { color: #6b7883; }
+html[data-mode='day'] .nav-btn.on { color: #8a5a06; }
+html[data-mode='day'] .nav-btn.on .ic { filter: drop-shadow(0 1px 2px rgba(202,138,4,.45)); }
+
+/* ⑥ 抽屉 · 弹窗 */
+html[data-mode='day'] .sheet-mask { background: rgba(18,30,42,.34); }
+html[data-mode='day'] .modal-host { background: rgba(18,30,42,.34); }
+html[data-mode='day'] .sheet {
+  background: linear-gradient(180deg, #ffffff, #f4f8fb);
+  border-top: 1px solid rgba(23,33,43,.10);
+  box-shadow: 0 -14px 40px rgba(23,33,43,.20);
+}
+html[data-mode='day'] .sheet-close:active { background: rgba(23,33,43,.07); }
+html[data-mode='day'] .tab {
+  background: #ffffff;
+  color: #4f5d67;
+  border-color: rgba(23,33,43,.14);
+}
+html[data-mode='day'] .sheet-foot {
+  background: rgba(23,33,43,.05);
+  border-top-color: rgba(23,33,43,.10);
+}
+html[data-mode='day'] .modal {
+  background: linear-gradient(180deg, #ffffff, #f5f9fb);
+  border: 1px solid rgba(23,33,43,.10);
+  box-shadow: 0 18px 50px rgba(23,33,43,.26);
+}
+html[data-mode='day'] .modal-body { color: #2b3840; }
+html[data-mode='day'] .modal-title { color: #8a5a06; }
+
+/* ⑦ 卡片 · 列表 · 控件 */
+html[data-mode='day'] .card {
+  background: linear-gradient(180deg, #ffffff, #f6fafc);
+  border-color: rgba(23,33,43,.11);
+  box-shadow: 0 8px 22px -16px rgba(23,33,43,.45);
+}
+html[data-mode='day'] .text-input,
+html[data-mode='day'] .ghost-btn,
+html[data-mode='day'] .ac-in {
+  background: #ffffff;
+  border-color: rgba(23,33,43,.14);
+  color: #131f29;
+}
+html[data-mode='day'] .ac-in:focus {
+  background: #ffffff;
+  border-color: rgba(202,138,4,.55);
+  box-shadow: 0 0 0 3px rgba(250,204,21,.16);
+}
+html[data-mode='day'] .text-input::placeholder,
+html[data-mode='day'] .ac-in::placeholder { color: #96a3ac; }
+html[data-mode='day'] .sect-chip,
+html[data-mode='day'] .gender-btn,
+html[data-mode='day'] .sex-btn {
+  background: #ffffff;
+  border-color: rgba(23,33,43,.13);
+  color: #41505a;
+}
+html[data-mode='day'] .sect-chip.on { box-shadow: 0 0 0 1px currentColor, 0 6px 16px -8px currentColor; }
+html[data-mode='day'] .si-bar .track { background: rgba(23,33,43,.12); }
+html[data-mode='day'] .stepper button { background: #ffffff; border-color: rgba(23,33,43,.14); color: #41505a; }
+html[data-mode='day'] .stepper button:active { background: rgba(250,204,21,.20); color: #8a5a06; }
+html[data-mode='day'] .eq-slot,
+html[data-mode='day'] .bag-cell {
+  background: #ffffff;
+  border-color: rgba(23,33,43,.13);
+}
+html[data-mode='day'] .item-card { background: linear-gradient(180deg, #ffffff, #f7fafc); }
+html[data-mode='day'] .ic-icon,
+html[data-mode='day'] .skill-item .sk-ic,
+html[data-mode='day'] .drop-card .dc-ic,
+html[data-mode='day'] .quest-item .q-ic,
+html[data-mode='day'] .friend-row .f-avatar {
+  background: radial-gradient(circle at 50% 32%, #ffffff, #e4edf3);
+}
+html[data-mode='day'] .skill-item,
+html[data-mode='day'] .pot-item,
+html[data-mode='day'] .quest-item,
+html[data-mode='day'] .rank-row,
+html[data-mode='day'] .friend-row,
+html[data-mode='day'] .drop-card,
+html[data-mode='day'] .offline-cell,
+html[data-mode='day'] .tier-row {
+  background: #ffffff;
+  border-color: rgba(23,33,43,.12);
+}
+html[data-mode='day'] .quest-item.done { background: rgba(250,204,21,.10); border-color: rgba(202,138,4,.45); }
+html[data-mode='day'] .quest-item .q-bar { background: rgba(23,33,43,.12); }
+html[data-mode='day'] .quest-item .q-title .tag-mini { background: rgba(202,138,4,.14); color: #8a5a06; }
+html[data-mode='day'] .rank-row.me { background: rgba(250,204,21,.12); border-color: rgba(202,138,4,.5); }
+html[data-mode='day'] .rank-no { background: rgba(23,33,43,.08); }
+html[data-mode='day'] .rank-val { color: #8a5a06; }
+html[data-mode='day'] .on-line { color: #15803d; }
+html[data-mode='day'] .seg {
+  background: rgba(23,33,43,.07);
+  border-color: rgba(23,33,43,.12);
+}
+html[data-mode='day'] .btn {
+  background: #ffffff;
+  border-color: rgba(23,33,43,.14);
+  color: #2b3840;
+}
+html[data-mode='day'] .btn.danger {
+  background: rgba(239,68,68,.10);
+  border-color: rgba(239,68,68,.36);
+}
+html[data-mode='day'] .switch {
+  background: rgba(23,33,43,.16);
+  border-color: rgba(23,33,43,.12);
+}
+html[data-mode='day'] .switch::after {
+  background: #ffffff;
+  box-shadow: 0 1px 3px rgba(23,33,43,.35);
+}
+html[data-mode='day'] .switch.on { background: rgba(20,184,166,.30); border-color: #0d9488; }
+html[data-mode='day'] .switch.on::after { background: #0f766e; box-shadow: 0 0 8px rgba(13,148,136,.55); }
+html[data-mode='day'] .set-row,
+html[data-mode='day'] .stat-line { border-bottom-color: rgba(23,33,43,.10); }
+html[data-mode='day'] .section-title { color: #55636d; }
+html[data-mode='day'] .section-title::after { background: rgba(23,33,43,.12); }
+html[data-mode='day'] .empty { color: #6b7883; }
+html[data-mode='day'] .si-passive {
+  color: #8a5a06;
+  background: rgba(202,138,4,.10);
+  border-color: rgba(202,138,4,.30);
+}
+html[data-mode='day'] .lv-realm { color: #8a5a06; text-shadow: none; }
+html[data-mode='day'] .tier-row.on .t-name { color: #8a5a06; }
+html[data-mode='day'] .tier-row.on .t-st { color: #8a5a06; }
+html[data-mode='day'] .tier-row.on {
+  background: rgba(250,204,21,.12);
+  border-color: rgba(202,138,4,.45);
+  box-shadow: 0 0 12px -6px rgba(202,138,4,.6);
+}
+
+/* ⑧ 提示条 */
+html[data-mode='day'] .toast {
+  background: rgba(255,255,255,.96);
+  border-color: rgba(23,33,43,.12);
+  color: #131f29;
+  box-shadow: 0 8px 24px rgba(23,33,43,.20);
+}
+html[data-mode='day'] .toast.gold { color: #8a5a06; border-color: rgba(202,138,4,.5); }
+html[data-mode='day'] .toast.jade { color: #0f766e; border-color: rgba(13,148,136,.45); }
+html[data-mode='day'] .toast.bad { color: #b91c1c; border-color: rgba(220,38,38,.45); }
+html[data-mode='day'] .pull-tip {
+  background: rgba(255,255,255,.96);
+  border-color: rgba(13,148,136,.45);
+  color: #0f766e;
+}
+html[data-mode='day'] .pull-tip.ready {
+  background: rgba(240,253,250,.98);
+  border-color: rgba(13,148,136,.75);
+  color: #0b5f59;
+}
+html[data-mode='day'] .upd-btn { color: #0f766e; background: rgba(20,184,166,.12); }
+html[data-mode='day'] .rotate-tip { background: #eaf1f6; color: #8a5a06; }
+
+/* ⑨ 角色创建页（首屏也随之明化） */
+html[data-mode='day'] .create-sky {
+  background:
+    radial-gradient(circle at 78% 14%, rgba(250,204,21,.30), transparent 46%),
+    radial-gradient(circle at 20% 78%, rgba(20,184,166,.20), transparent 48%),
+    linear-gradient(180deg, #cfe4f2 0%, #e3f0f7 46%, #eef4f8 100%);
+}
+html[data-mode='day'] .create-ridge { background: #e2ecf2; }
+html[data-mode='day'] .create-ridge.cr1 { background: linear-gradient(180deg, #b9d3e2, #d8e7ef); opacity: .7; }
+html[data-mode='day'] .create-ridge.cr2 { background: linear-gradient(180deg, #a8c6da, #cfe0ea); opacity: .85; }
+html[data-mode='day'] .create-veil { background: linear-gradient(180deg, transparent 34%, rgba(232,241,247,.72) 74%, #e7eef4 100%); }
+html[data-mode='day'] .brand-mark {
+  background: radial-gradient(circle at 50% 35%, rgba(250,204,21,.32), rgba(250,204,21,.06));
+  border-color: rgba(202,138,4,.42);
+  box-shadow: 0 0 20px rgba(250,204,21,.26);
+}
+html[data-mode='day'] .brand-title {
+  background: linear-gradient(180deg, #d99a0b 6%, #a8620a 46%, #6d3b04 100%);
+  -webkit-background-clip: text; background-clip: text;
+  filter: drop-shadow(0 1px 4px rgba(202,138,4,.26));
+}
+html[data-mode='day'] .primary-btn {
+  box-shadow: 0 8px 20px -8px rgba(202,138,4,.55), inset 0 1px 0 rgba(255,255,255,.6);
+}
+
+/* ⑩ 强调色统一压暗
+   以下位置的颜色由 JS 内联写入（门派色 / 品质色 / 奖励色 / 技能名），
+   夜间那套是为深底挑的，浅底上普遍偏亮。逐个改内联既散又易漏，
+   这里用 filter 整体压暗 —— 保留色相差异（经验/金币/元宝/强化石/品质仍一眼可辨），
+   只作用于纯文字节点，不改变布局。 */
+html[data-mode='day'] :is(
+  .si-name, .affix-line, .q-ic, .q-rw span, .p-ic,
+  .sk-name, .ic-name, .dc-name, .dc-sub, .q-title,
+  .stat-line .v, .q-desc
+) {
+  filter: brightness(.62) saturate(1.35);
+}
+
+/* ⑪ 战斗文字：亮背景上加深描边，保证飘字/法术名始终可读 */
+html[data-mode='day'] .float-num {
+  filter: brightness(.72) saturate(1.45);
+  text-shadow:
+    0 0 1px #0c1722, 1px 0 0 #0c1722, -1px 0 0 #0c1722,
+    0 1px 0 #0c1722, 0 -1px 0 #0c1722, 0 2px 6px rgba(12,23,34,.45);
+}
+html[data-mode='day'] .cast-label {
+  text-shadow: 0 1px 3px rgba(12,23,34,.55), 0 0 10px rgba(255,255,255,.75);
+}
+html[data-mode='day'] .levelup-banner .lv-big {
+  background: linear-gradient(180deg, #d99a0b 8%, #a8620a 52%, #6d3b04 100%);
+  -webkit-background-clip: text; background-clip: text;
+  filter: drop-shadow(0 2px 10px rgba(202,138,4,.45));
+}
+html[data-mode='day'] .levelup-banner .lv-sub { color: #8a5a06; }
 

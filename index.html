@@ -7,7 +7,24 @@
 <meta name="apple-mobile-web-app-capable" content="yes" />
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
 <title>诛仙问道 · 挂机修仙</title>
-<link rel="stylesheet" href="css/style.css?v=202609230239" />
+<script>
+/* 首屏即定主题（日/夜），避免夜间用户先闪一帧亮色；
+   同时在 <html> 上打 data-mode，CSS 才能按模式着色。存档键与 core.js 的 SAVE_KEY 一致。 */
+(function () {
+  var mode = 'day';
+  try {
+    var raw = localStorage.getItem('zhuxian_idle_save_v1');
+    if (raw) {
+      var st = JSON.parse(raw);
+      if (st && st.settings && st.settings.dayMode === false) mode = 'night';
+    }
+  } catch (e) { }
+  document.documentElement.setAttribute('data-mode', mode);
+  var mt = document.querySelector('meta[name="theme-color"]');
+  if (mt) mt.setAttribute('content', mode === 'day' ? '#e7eef4' : '#0c0a09');
+})();
+</script>
+<link rel="stylesheet" href="css/style.css?v=202609230247" />
 </head>
 <body>
 <div id="app">
@@ -106,20 +123,20 @@
 </div>
 <div class="rotate-tip" id="rotate-tip">请竖屏握持手机</div>
 
-<script src="js/icons.js?v=202609230239"></script>
+<script src="js/icons.js?v=202609230247"></script>
 <script>if (window.LUCIDE_SPRITE) document.body.insertAdjacentHTML('afterbegin', window.LUCIDE_SPRITE);</script>
-<script src="js/data.js?v=202609230239"></script>
-<script src="js/figure.js?v=202609230239"></script>
-<script src="js/skeleton.js?v=202609230239"></script>
-<script src="js/figure-motion.js?v=202609230239"></script>
-<script src="js/music.js?v=202609230239"></script>
-<script src="js/account.js?v=202609230239"></script>
-<script src="js/tcb-sdk.js?v=202609230239"></script>
+<script src="js/data.js?v=202609230247"></script>
+<script src="js/figure.js?v=202609230247"></script>
+<script src="js/skeleton.js?v=202609230247"></script>
+<script src="js/figure-motion.js?v=202609230247"></script>
+<script src="js/music.js?v=202609230247"></script>
+<script src="js/account.js?v=202609230247"></script>
+<script src="js/tcb-sdk.js?v=202609230247"></script>
 <script>window.LX_TCB_ENV = 'lingxu-7-d0ggtxsjw13210d0c';</script>
-<script src="js/core.js?v=202609230239"></script>
-<script src="js/render.js?v=202609230239"></script>
-<script src="js/ui.js?v=202609230239"></script>
-<script src="js/main.js?v=202609230239"></script>
+<script src="js/core.js?v=202609230247"></script>
+<script src="js/render.js?v=202609230247"></script>
+<script src="js/ui.js?v=202609230247"></script>
+<script src="js/main.js?v=202609230247"></script>
 <script>
 /* ===================== 自动更新到最新版 =====================
    发布时 BUILD 会被替换为发布时间戳：
@@ -127,7 +144,7 @@
      · 每 45 秒 / 每次切回前台检查 version.json，发现新版自动刷新
    存档在 localStorage，刷新不会丢进度。 */
 (function () {
-  var CUR = '202609230239';
+  var CUR = '202609230247';
   var busy = false;
   function check() {
     if (busy) return;
