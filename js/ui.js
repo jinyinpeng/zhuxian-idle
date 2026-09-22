@@ -184,7 +184,11 @@
         (s.bag || []).length,
         UI.tab.bag,
         (s.bag || []).filter(i => i.isNew).length,
-        Object.keys(s.equipped || {}).map(k => (s.equipped[k] && s.equipped[k].uid) || '-').join(',')
+        Object.keys(s.equipped || {}).map(k => (s.equipped[k] && s.equipped[k].uid) || '-').join(','),
+        /* 选中项必须参与签名：否则「点选某件装备」时签名不变，
+           renderSheet 会在第 199 行直接早退 —— 详情与装备/强化/出售按钮刷不出来，
+           连选中高亮都不会出现。 */
+        UI.bagSel || '-'
       ].join('|');
     }
     return '';
@@ -576,17 +580,18 @@
           const it = ref.item;
           const cur = s.equipped[it.slot];
           s.bag.splice(ref.index, 1);
+          let folded = 0;          /* 行囊没空位时，换下的旧装备折算金币 */
           if (cur) {
             if (s.bag.length < 60) s.bag.push(cur);
             else {
-              const g = G.sellPrice(cur);
-              s.res.gold += g; s.stats.goldTotal += g;
-              R.toast('行囊已满，旧装备折算 ' + G.fmt(g) + ' 金币');
+              folded = G.sellPrice(cur);
+              s.res.gold += folded; s.stats.goldTotal += folded;
             }
           }
           it.isNew = false;
           s.equipped[it.slot] = it;
-          R.toast('已装备 ' + it.name, 'jade');
+          /* 只弹一条：把「折算金币」并进装备提示，不再单独喊「行囊已满」 */
+          R.toast('已装备 ' + it.name + (folded ? '（旧装备折算 ' + G.fmt(folded) + ' 金币）' : ''), 'jade');
           UI.bagSel = it.uid;
           R.refreshHeroBase();
           renderSheet('bag'); renderTop();
@@ -596,7 +601,7 @@
       case 'unequip': {
         const ref = G.findItem(node.getAttribute('data-uid'));
         if (ref && ref.where === 'equip') {
-          if (s.bag.length >= 60) { R.toast('行囊已满，无法卸下', 'bad'); break; }
+          if (s.bag.length >= 60) { R.toast('请先出售或整理行囊，腾出空位', 'bad'); break; }
           const it = ref.item;
           delete s.equipped[ref.slot];
           s.bag.push(it);

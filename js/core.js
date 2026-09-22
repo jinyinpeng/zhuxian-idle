@@ -521,6 +521,9 @@
     return Math.floor((14 + it.ilvl * 9) * q.mult * (1 + it.enh * 0.25));
   }
 
+  /* 行囊满时的提示节流：只在「刚满」那一刻说一次，避免每次掉落都刷屏 */
+  let bagFullLogged = false;
+
   function grantItem(it) {
     G.stats.itemTotal++;
     // 自动出售
@@ -558,9 +561,16 @@
       G.res.gold += g;
       G.stats.goldTotal += g;
       emit('autosell', { item: it, gold: g, full: true });
-      log('行囊已满，自动售出【' + it.name + '】+' + fmt(g), 'info');
+      /* 界面不再为此弹提示；日志也只在「刚满」那一刻记一条 ——
+         行囊满着挂机时每次掉落都提示，只会把战斗日志整个冲掉。
+         腾出空位后重新满上，才会再提示一次。 */
+      if (!bagFullLogged) {
+        bagFullLogged = true;
+        log('行囊已满，多余掉落自动折算金币', 'info');
+      }
       return;
     }
+    bagFullLogged = false;
     G.bag.push(it);
     emit('drop', it);
   }

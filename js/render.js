@@ -1104,9 +1104,9 @@
       if (it.quality >= 3) toast('自动装备 ' + q.name + '【' + it.name + '】', 'jade');
       refreshHeroBaseLite();
     });
-    G.on('autosell', e => {
-      if (e.full) toast('行囊已满，自动售出获取 ' + G.fmt(e.gold) + ' 金币', 'bad');
-    });
+    /* v28：行囊满时不再弹提示。
+       这一条会在挂机时每次掉落都触发，一条接一条占住屏幕；
+       金币照常折算，说明交给 core.js 在「刚满」时记一条日志即可。 */
 
     G.on('kill', m => {
       const node = mobNode(m && m.idx);
