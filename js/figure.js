@@ -459,6 +459,10 @@
 
   /* ============================================================ 对外 API */
   function monsterSvg(family, elite) {
+    /* v28：优先用 mob-art.js 的写实向矢量立绘（体块 + 三段明暗 + 轮廓光 + 遮蔽） */
+    var A = global.MOB_ART;
+    if (A && A[family]) return A[family](elite);
+    /* 旧版扁平 SVG：仅在 mob-art.js 未加载时兜底 */
     if (family === 'ghost') return ghostFig(elite);
     if (family === 'demon') return demonFig(elite);
     if (family === 'human') return humanFig(elite);
@@ -476,9 +480,14 @@
     tianyin: 'assets/hero_tianyin.png',
     fenxiang: 'assets/hero_fenxiang.png'
   };
+  /* v28：mob_beast.png / mob_demon.png 实测是「几乎全透明、极淡的素描线」
+     （角像素 A=0，体像素 A≈0~33）—— 在深色场景里只剩一点灰痕，撑不起"怪物"的
+     可信度，已改用 mob-art.js 的矢量立绘。
+     日后若换上真正的写实立绘（透明底或纯黑底都行，纯黑底由 CSS 的 screen 混合去底），
+     把下面两行取消注释即可重新优先使用图片。 */
   var MOB_IMG = {
-    beast: 'assets/mob_beast.png',
-    demon: 'assets/mob_demon.png'
+    /* beast: 'assets/mob_beast.png', */
+    /* demon: 'assets/mob_demon.png' */
   };
   /* 女版立绘（放在 assets 下即自动生效，例如 hero_qingyun_f.png；缺失则回退到通用图） */
   /* 女版立绘：现有通用女性形象 hero_female.png；
