@@ -994,6 +994,11 @@
       });
     });
 
+    /* v25：换门派（此前只有按钮没有处理器，点了毫无反应） */
+    el.modal.querySelectorAll('[data-changesect]').forEach(n => {
+      n.addEventListener('click', () => openSectSwitch());
+    });
+
     el.modal.querySelectorAll('[data-daymode]').forEach(n => {
       n.addEventListener('click', () => {
         const on = G.state.settings.dayMode === false;   /* 当前是夜间 → 点后为日间 */
@@ -1022,6 +1027,50 @@
       n.addEventListener('click', () => {
         st.autoSellQuality = parseInt(n.getAttribute('data-sell'), 10);
         el.modal.querySelectorAll('[data-sell]').forEach(x => x.classList.toggle('on', x === n));
+      });
+    });
+  }
+
+  /* ============================ 换门派 ============================ */
+  /* 换门派只改「门派」，不动修为等级 / 装备 / 行囊 / 任务：
+     门派属性加成与被动心法立即生效，功法名随门派变化。 */
+  function openSectSwitch() {
+    const cur = G.state.sect;
+    const rows = D.SECTS.map(s => {
+      const on = s.id === cur;
+      return '<div class="drop-card' + (on ? ' done' : '') + '" data-pick="' + s.id + '" style="' +
+        (on ? 'border-color:rgba(250,204,21,.5);background:rgba(250,204,21,.07)' : '') +
+        ';color:' + s.color + '">' +
+        '<div class="dc-ic">' + ic('swords') + '</div>' +
+        '<div class="dc-main">' +
+          '<div class="dc-name" style="color:' + (on ? '#facc15' : '#e7e5e4') + '">' + esc(s.name) + (on ? ' · 当前' : '') + '</div>' +
+          '<div class="dc-sub">' + esc(s.tag) + ' · 【' + esc(s.passive.name) + '】' + esc(s.passive.desc) + '</div>' +
+        '</div>' +
+        (on ? ic('check') : ic('chevron-right')) +
+      '</div>';
+    }).join('');
+
+    openModal({
+      title: '换门派',
+      sub: '当前：' + esc(G.sectOf(cur).name),
+      body: '<div style="margin-bottom:8px;font-size:11.5px;color:#78716c;line-height:1.7">' +
+        '换门派后：门派属性加成与被动心法立即生效，功法名随门派变化；' +
+        '修为等级、装备、行囊与任务进度全部保留。</div>' + rows,
+      buttons: [{ label: '关闭', cls: 'gold' }]
+    });
+
+    el.modal.querySelectorAll('[data-pick]').forEach(n => {
+      n.addEventListener('click', () => {
+        const id = n.getAttribute('data-pick');
+        if (id === G.state.sect) { R.toast('已在本门，无需更换'); return; }
+        const before = G.sectOf(G.state.sect).name;
+        G.state.sect = id;
+        try { G.save(); } catch (e) { }
+        R.rebuildHero();
+        R.refreshHeroBase();
+        renderTop();
+        closeModal();
+        R.toast(before + ' → ' + G.sectOf(id).name + '，已改换门庭', 'gold');
       });
     });
   }

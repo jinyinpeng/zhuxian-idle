@@ -195,6 +195,9 @@
       update: update,
       get mode() { return mode; },
       destroy: function () {
+        /* 类挂在「单位」节点上，卸载时两个都要清掉，否则残留的 .fig-motion
+           会继续命中 .fig-src-hidden 规则，把后换上的新立绘一起隐藏 */
+        unitNode.classList.remove('fig-motion');
         avatar.classList.remove('fig-motion');
         fig.classList.remove('fig-src-hidden');
         if (hips.parentNode) hips.parentNode.removeChild(hips);

@@ -388,11 +388,17 @@
     if (!sect) return;
     const av = ui.hero.querySelector('.avatar');
     if (!av) return;
+    /* v25：先卸掉立绘动作层 —— 动作层里渲染的是它的副本，
+       不卸的话换门派/换性别后画面里仍是旧立绘 */
+    if (heroFig && heroFig.destroy) { try { heroFig.destroy(); } catch (e) { } }
+    heroFig = null;
     const old = av.querySelector('.fig');
     const holder = document.createElement('div');
     holder.innerHTML = FIG.hero(sect.id, (G.state.gender || 'male'));
     const next = holder.firstChild;
     if (old && next) av.replaceChild(next, old);
+    else if (next) av.insertBefore(next, av.firstChild);
+    mountHeroFig();          /* 用新形象重新挂上动作层 */
     refreshHeroBase();
   }
 
