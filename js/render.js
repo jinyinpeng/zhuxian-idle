@@ -1096,6 +1096,10 @@
     });
   }
 
+  /* 供 index.html 那段「发现新版本，正在更新…」提示使用。
+     此前它检测的是 window.LXU，而这个全局从未被定义过 —— 提示是死代码。 */
+  global.LXU = { toast: toast };
+
   global.Render = {
     init, frame, toast, setRegion, refreshHud, refreshHeroBase,
     ic, esc, floatText, burst, pushLog, unitPos, renderMobs, mobNode, skillBurst,

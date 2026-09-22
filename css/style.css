@@ -2453,6 +2453,13 @@ html, body { overscroll-behavior-y: auto; }
 }
 .pull-tip.on { transform: translate(-50%, 0); opacity: .95; }
 .pull-tip.ready { background: rgba(20,40,34,.95); border-color: rgba(94,234,212,.7); color: #ccfbf1; }
+/* v26：下拉跟手 —— 拖动期间取消 transform 过渡（否则指示器滞后于手指），
+   松手时恢复过渡以回弹；图标随下拉进度旋转，刷新中持续转圈。 */
+.pull-tip { display: inline-flex; align-items: center; gap: 6px; }
+.pull-tip.pulling { transition: opacity .1s; }
+.pull-tip .pull-ic { transform: rotate(var(--rot, 0deg)); }
+.pull-tip.busy .pull-ic { animation: spin .75s linear infinite; }
+.pull-tip .pull-tx { white-space: nowrap; }
 .upd-btn {
   flex: none; padding: 8px 14px; border-radius: 9px;
   border: 1px solid rgba(94,234,212,.5);

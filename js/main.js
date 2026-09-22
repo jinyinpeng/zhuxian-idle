@@ -177,42 +177,131 @@
   } else {
     document.addEventListener('DOMContentLoaded', boot);
   }
-  /* v15：自定义「下拉刷新」—— 从屏幕顶部下拉即可拉到最新版
-     （游戏全屏 overflow:hidden，系统自带的下拉刷新不会触发） */
+  /* v26：自定义「下拉刷新」—— 下拉后松手即更新到最新版
+     （游戏全屏 overflow:hidden，系统自带的下拉刷新不会触发，只能自己实现）
+
+     与旧版（v15）的区别：
+       · 旧版只能在屏幕顶部 22% 起手，从画面中间往下拉毫无反应 —— 现在全屏任意处皆可；
+       · 旧版是「拖动过程中」就刷新，手指还没松开页面已经跳走 —— 现在改为松手才刷新，
+         并实时提示「下拉更新 → 松手更新 → 正在更新…」；
+       · 面板 / 弹窗里滚动条已离开顶部时让位给滚动，不会误触。 */
   (function pullToRefresh() {
-    let sy = 0, armed = false, fired = false, tip = null;
-    function showTip(ok) {
-      if (!tip) {
-        tip = document.createElement('div');
-        tip.className = 'pull-tip';
-        document.body.appendChild(tip);
-      }
-      tip.textContent = ok ? '松手刷新' : '下拉刷新';
-      tip.classList.add('on');
-      tip.classList.toggle('ready', !!ok);
+    const THRESHOLD = 62;      /* 松手触发距离（px） */
+    const MAX = 96;            /* 指示器最大跟手位移 */
+    let sy = 0, sx = 0, dy = 0;
+    let tracking = false, pulling = false, fired = false, firedAt = 0;
+    let tip = null, tx = null;
+
+    function build() {
+      if (tip) return;
+      tip = document.createElement('div');
+      tip.className = 'pull-tip';
+      tip.innerHTML = '<svg class="ic pull-ic"><use href="#i-refresh-cw"></use></svg>' +
+        '<span class="pull-tx">下拉更新</span>';
+      document.body.appendChild(tip);
+      tx = tip.querySelector('.pull-tx');
     }
-    function hideTip() { if (tip) tip.classList.remove('on', 'ready'); }
-    /* 用捕获阶段：顶栏按钮等元素不会把事件吞掉 */
-    document.addEventListener('touchstart', function (e) {
-      if (e.touches.length !== 1) { armed = false; return; }
-      sy = e.touches[0].clientY;
-      /* 顶部区域起手，且不在面板/弹窗内（面板顶部正好压在起手区，必须排除） */
-      var inside = !!(e.target && e.target.closest && e.target.closest('.sheet, .modal-host, .create-inner'));
-      armed = !inside && sy < global.innerHeight * 0.22;
-      fired = false;
-    }, { passive: true, capture: true });
-    document.addEventListener('touchmove', function (e) {
-      if (!armed || fired || e.touches.length !== 1) return;
-      const dy = e.touches[0].clientY - sy;
-      if (dy > 18) showTip(dy > 58);
-      if (dy > 58) {                            /* 阈值降到 58px，更易触发 */
-        fired = true;
-        if (G.state) { try { G.save(); } catch (err) {} }
-        location.replace(location.pathname + '?u=' + Date.now());
+    function say(t) { build(); if (tx.textContent !== t) tx.textContent = t; }
+
+    function paint(d) {
+      build();
+      tip.classList.add('on', 'pulling');
+      tip.classList.remove('busy');
+      const shift = Math.min(MAX, d * 0.62);
+      tip.style.transform = 'translate(-50%,' + Math.round(shift - 46) + 'px)';
+      tip.style.opacity = String(Math.min(1, d / 34));
+      tip.style.setProperty('--rot', Math.round(Math.min(1, d / THRESHOLD) * 200) + 'deg');
+      const ok = d >= THRESHOLD;
+      tip.classList.toggle('ready', ok);
+      say(ok ? '松手更新' : '下拉更新');
+    }
+    function reset() {
+      tracking = false; pulling = false;
+      if (!tip) return;
+      tip.classList.remove('pulling', 'ready');
+      tip.style.transform = '';
+      tip.style.opacity = '';
+      tip.style.removeProperty('--rot');
+      tip.classList.remove('on');
+    }
+
+    /* 起手处若有「已经滚走」的可滚动容器，这次手势归它滚动。
+       只看 scrollTop / scrollHeight，不依赖 getComputedStyle —— 个别浏览器会把
+       overflow-y 取成空串，那样会把可滚动面板误判成可下拉刷新。 */
+    function scrolled(node) {
+      for (let n = node; n && n !== document.body && n.nodeType === 1; n = n.parentElement) {
+        if (n.scrollTop > 2 && n.scrollHeight - n.clientHeight > 4) return true;
       }
+      return false;
+    }
+
+    /* 松手后吞掉浏览器补发的那一次 click，避免误点到底下的按钮 */
+    function eatClick() {
+      const kill = (ev) => { ev.stopPropagation(); ev.preventDefault(); };
+      document.addEventListener('click', kill, { capture: true, once: true });
+      setTimeout(() => document.removeEventListener('click', kill, true), 460);
+    }
+
+    function refresh() {
+      fired = true;
+      firedAt = Date.now();
+      build();
+      tip.classList.add('on', 'ready', 'busy');
+      tip.classList.remove('pulling');
+      tip.style.transform = 'translate(-50%,0)';
+      tip.style.opacity = '1';
+      say('正在更新…');
+      try { if (G.state) G.save(); } catch (err) { }
+
+      /* 带时间戳重载，强制绕过 CDN 与浏览器缓存拿到最新 HTML；
+         顺带读一次 version.json，把「更新到哪个构建」带进新地址 */
+      const go = (v) => global.location.replace(global.location.pathname +
+        '?u=' + Date.now() + (v ? '&v=' + encodeURIComponent(v) : ''));
+      let done = false;
+      const fallback = setTimeout(() => { if (!done) { done = true; go(null); } }, 1500);
+      if (typeof global.fetch !== 'function') { clearTimeout(fallback); go(null); return; }
+      global.fetch('version.json?t=' + Date.now(), { cache: 'no-store' })
+        .then((r) => (r.ok ? r.json() : null))
+        .then((j) => { if (done) return; done = true; clearTimeout(fallback); go(j && j.v); })
+        .catch(() => { if (done) return; done = true; clearTimeout(fallback); go(null); });
+    }
+
+    /* 捕获阶段：顶栏按钮等元素不会把事件吞掉 */
+    document.addEventListener('touchstart', function (e) {
+      /* 上一次跳转迟迟没发生（被浏览器拦截等）→ 允许再试一次，别把下拉刷新锁死 */
+      if (fired && Date.now() - firedAt > 2500) fired = false;
+      if (e.touches.length !== 1 || fired) { tracking = false; return; }
+      const t = e.touches[0];
+      sy = t.clientY; sx = t.clientX; dy = 0;
+      pulling = false;
+      tracking = !scrolled(e.target);
     }, { passive: true, capture: true });
-    document.addEventListener('touchend', function () { armed = false; setTimeout(hideTip, 120); }, { passive: true, capture: true });
-    document.addEventListener('touchcancel', function () { armed = false; hideTip(); }, { passive: true, capture: true });
+
+    document.addEventListener('touchmove', function (e) {
+      if (!tracking || e.touches.length !== 1) return;
+      const t = e.touches[0];
+      dy = t.clientY - sy;
+      if (!pulling) {
+        /* 必须是明确的向下手势：纵向占优，且越过起手抖动与横滑 */
+        if (dy < 8 || Math.abs(t.clientX - sx) > dy) {
+          if (dy < 0) tracking = false;
+          return;
+        }
+        pulling = true;
+      }
+      if (dy <= 0) { reset(); return; }      /* 反向拖动 → 放弃这次下拉 */
+      paint(dy);
+    }, { passive: true, capture: true });
+
+    document.addEventListener('touchend', function () {
+      if (!tracking) return;
+      const fire = pulling && dy >= THRESHOLD;
+      if (fire) { eatClick(); refresh(); return; }
+      reset();
+    }, { passive: true, capture: true });
+
+    document.addEventListener('touchcancel', function () { if (!fired) reset(); },
+      { passive: true, capture: true });
   })();
 
   global.addEventListener('beforeunload', () => { if (G.state) G.save(); });
