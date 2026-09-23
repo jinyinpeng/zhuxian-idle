@@ -495,7 +495,9 @@
   var HERO_IMG_F = {
     qingyun: 'assets/hero_qingyun_f.png',
     guiwang: 'assets/hero_guiwang_f.png',
-    hehuan: 'assets/hero_hehuan.png',
+    /* v28：这里原本指向 hero_hehuan.png —— 那是男版合欢的图，女角色会被套上男相。
+       改为同一套命名 hero_hehuan_f.png（尚未产出则由门派女版 SVG 兜底）。 */
+    hehuan: 'assets/hero_hehuan_f.png',
     tianyin: 'assets/hero_tianyin_f.png',
     fenxiang: 'assets/hero_fenxiang_f.png'
   };
@@ -593,13 +595,17 @@
 
   function hero(sectId, gender) {
     if (gender === 'female') {
-      /* 门派专属女版 → 通用女版 → 内置 SVG（由 CSS 镜像为女相） */
-      var want = HERO_IMG_F[sectId] || HERO_IMG_FALLBACK;
-      var chain = [];
-      if (HERO_IMG_FALLBACK && want !== HERO_IMG_FALLBACK) chain.push(HERO_IMG_FALLBACK);
-      /* 门派专属女版已知缺失 → 直接用通用女版，而不是跌到男相 SVG */
-      if (IMG_BAD[want] && chain.length) want = chain.shift();
-      return imgFig(want, { key: 'hf:' + sectId, gender: 'female', chain: chain, svg: heroSvgCached(sectId) });
+      /* v28：门派专属女版图 → 门派专属女版立绘（SVG）→（不再退回通用女图）。
+         原来是「门派专属女版图 → 通用女版图」，而 5 张门派女版图都尚未产出，
+         于是五个门派的女相全部是同一张通用图 —— 也就是「选女之后形象全都一样」。
+         现在中间补一层「按门派绘制的女版 SVG」（hero-female.js）：
+         五个门派各有其形，且与男版共用同一套门派配色与兵器。 */
+      var want = HERO_IMG_F[sectId] || '';
+      var svgF = (global.HERO_FEMALE && global.HERO_FEMALE[sectId])
+        ? global.HERO_FEMALE[sectId]()
+        : heroSvgCached(sectId);
+      if (!want || IMG_BAD[want]) return svgF;      /* 门派女版图缺失 → 用门派女版 SVG */
+      return imgFig(want, { key: 'hf:' + sectId, gender: 'female', svg: svgF });
     }
     var src = HERO_IMG[sectId];
     if (!src) return heroSvgCached(sectId);

@@ -71,19 +71,66 @@
   }
 
   const MULT_LABEL = { hp: '气血', atk: '攻击', def: '防御', crit: '暴击', dodge: '闪避', spd: '攻速' };
+  /* 六角星顶点顺序：正上方起顺时针 —— 上(气血) 右上(攻击) 右下(防御) 下(暴击)
+     左下(闪避) 左上(攻速)。顺序固定，门派之间才可比。 */
+  const RADAR_AXES = ['hp', 'atk', 'def', 'crit', 'dodge', 'spd'];
+
+  /* ---------------------------------------------------------------- 六角星属性面板
+     把六项核心属性摊到正六边形的六个顶点上：网格圈 + 辐条 + 数值多边形 + 顶点数值。
+     归一化：门派倍率大致在 0.80~1.70 之间，映射到半径的 0.08~1.0，
+     这样"最小也看得见一点、最大也不会顶到框"。 */
+  function hexRadar(mult, color) {
+    const CX = 100, CY = 88, R = 52, LR = 73;
+    const pt = (i, r) => {
+      const a = (-90 + i * 60) * Math.PI / 180;
+      return [CX + Math.cos(a) * r, CY + Math.sin(a) * r];
+    };
+    const n1 = v => (Math.round(v * 10) / 10).toFixed(1);
+    const ratios = RADAR_AXES.map(k => Math.max(0.08, Math.min(1, (mult[k] - 0.80) / 0.90)));
+    const top = ratios.indexOf(Math.max.apply(null, ratios));
+
+    /* 网格：4 圈六边形 + 6 条辐条（走 currentColor，跟随日夜主题） */
+    let grid = '';
+    [0.25, 0.5, 0.75, 1].forEach((f, k) => {
+      const pts = RADAR_AXES.map((_, i) => pt(i, R * f).map(n1).join(',')).join(' ');
+      grid += '<polygon points="' + pts + '" fill="none" stroke="currentColor" stroke-opacity="' +
+        (k === 3 ? '.30' : '.14') + '" stroke-width="' + (k === 3 ? '1.2' : '.8') + '"/>';
+    });
+    RADAR_AXES.forEach((_, i) => {
+      const p = pt(i, R);
+      grid += '<line x1="' + CX + '" y1="' + CY + '" x2="' + n1(p[0]) + '" y2="' + n1(p[1]) +
+        '" stroke="currentColor" stroke-opacity=".14" stroke-width=".8"/>';
+    });
+
+    /* 数值多边形 + 顶点标记 + 顶点标签（名称一行、数值一行） */
+    const poly = ratios.map((r, i) => pt(i, R * r).map(n1).join(',')).join(' ');
+    let marks = '', labels = '';
+    ratios.forEach((r, i) => {
+      const p = pt(i, R * r), lp = pt(i, LR), hot = i === top;
+      marks += '<circle cx="' + n1(p[0]) + '" cy="' + n1(p[1]) + '" r="' + (hot ? 3.1 : 2.2) + '" fill="' +
+        (hot ? '#ffffff' : color) + '"' + (hot ? ' stroke="' + color + '" stroke-width="1.6"' : '') + '/>';
+      const anchor = Math.abs(lp[0] - CX) < 6 ? 'middle' : (lp[0] > CX ? 'start' : 'end');
+      const dy = lp[1] < CY - 20 ? -4 : (lp[1] > CY + 20 ? 10 : 5);
+      labels += '<text x="' + n1(lp[0]) + '" y="' + n1(lp[1] + dy) + '" text-anchor="' + anchor +
+        '" font-size="' + (hot ? '10.5' : '10') + '" font-weight="' + (hot ? '700' : '500') +
+        '" fill="' + (hot ? color : 'currentColor') + '">' + MULT_LABEL[RADAR_AXES[i]] + '</text>' +
+        '<text x="' + n1(lp[0]) + '" y="' + n1(lp[1] + dy + 10) + '" text-anchor="' + anchor +
+        '" font-size="9.5" fill="currentColor" opacity=".62">' + mult[RADAR_AXES[i]].toFixed(2) + '</text>';
+    });
+
+    return '<div class="si-radar-wrap">' +
+      '<svg class="si-radar" viewBox="0 0 200 186" xmlns="http://www.w3.org/2000/svg" aria-label="门派属性六角星">' +
+        grid +
+        '<polygon points="' + poly + '" fill="' + color + '" fill-opacity=".26" stroke="' + color +
+          '" stroke-width="1.8" stroke-linejoin="round"/>' +
+        marks + labels +
+      '</svg>' +
+      '<div class="si-radar-note">六角星外圈为该门派的属性上限，顶点越靠外越强</div>' +
+      '</div>';
+  }
 
   function renderSectInfo(id) {
     const s = D.SECTS.find(x => x.id === id);
-    let bars = '';
-    Object.keys(MULT_LABEL).forEach(k => {
-      const v = s.mult[k];
-      const r = Math.max(0.06, Math.min(1, (v - 0.80) / 0.90));
-      bars += '<div class="si-bar" style="color:' + s.color + '">' +
-        '<span class="lab">' + MULT_LABEL[k] + '</span>' +
-        '<span class="track"><span class="fill" style="width:' + (r * 100).toFixed(0) + '%"></span></span>' +
-        '<span class="mono" style="width:34px;text-align:right">' + v.toFixed(2) + '</span>' +
-      '</div>';
-    });
     $('sect-info').innerHTML =
       '<div class="si-head">' +
         '<span class="si-name" style="color:' + s.color + '">' + s.name + '</span>' +
@@ -91,7 +138,7 @@
       '</div>' +
       '<p class="si-motto">' + s.motto + '</p>' +
       '<p class="si-desc">' + s.desc + '</p>' +
-      '<div class="si-bars">' + bars + '</div>' +
+      hexRadar(s.mult, s.color) +
       '<div class="si-passive">【' + s.passive.name + '】' + s.passive.desc + '</div>';
   }
 

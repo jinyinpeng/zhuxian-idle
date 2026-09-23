@@ -2460,9 +2460,17 @@ html, body { overscroll-behavior-y: auto; }
   background: rgba(250,204,21,.12);
   box-shadow: 0 0 12px -4px rgba(250,204,21,.5);
 }
-.unit.hero.gender-female .avatar img.fig:not([data-gender="female"]) { scale: -1 1; }
-.unit.hero.gender-female .avatar svg.fig { scale: -1 1; }   /* 内置 SVG 回退时同样镜像 */
-.sect-chip.gender-female .sc-fig .fig { scale: -1 1; }
+/* v28：镜像改挂在「外层容器」上，不再加在 .fig 自身 ——
+   原因：.fig 的居中靠 translateX(-50%)，而待机动画 heroIdle/mobIdle 的每一帧
+   也把这个位移写在 transform 里；scale 属性先于 transform 生效，会把 -50% 一起
+   镜像成 +50%，人物就被推出框外（选「女」时人物不在框里正是这么来的）。
+   挂到 .avatar / .sc-fig：容器本身没有位移，镜像围绕容器中心进行，
+   子元素原有的 translateX(-50%) 照常居中；容器里只有对称的地纹/投影，翻面无副作用。 */
+.unit.hero.gender-female .avatar,
+.sect-chip.gender-female .sc-fig { scale: -1 1; }
+/* 门派专属女版插画本身就是女相，再翻一次会左右颠倒 → 反向抵消回来 */
+.unit.hero.gender-female .avatar img.fig[data-gender='female'],
+.sect-chip.gender-female .sc-fig .fig[data-gender='female'] { scale: -1 1; }
 
 /* v19 性别切换（设置面板内） */
 .sex-switch { display: flex; gap: 6px; flex: none; }
@@ -3063,6 +3071,8 @@ html[data-mode='day'] .cp-sk-ic > .ic {
   .sect-info { padding-top: calc(12 * var(--u)); margin-top: calc(12 * var(--u)); min-height: calc(96 * var(--u)); }
   .si-name { font-size: calc(18 * var(--u)); }
   .si-motto, .si-tag, .si-bar { font-size: calc(11.5 * var(--u)); }
+  .si-radar-wrap { max-width: calc(264 * var(--u)); }
+  .si-radar-note { font-size: calc(10 * var(--u)); }
   .si-desc { font-size: calc(12.5 * var(--u)); }
   .primary-btn { height: calc(50 * var(--u)); font-size: calc(17 * var(--u)); }
   .tip { font-size: calc(11 * var(--u)); }
@@ -3337,4 +3347,32 @@ html[data-mode='day'] .grade2::before { opacity: .2; mix-blend-mode: soft-light;
     radial-gradient(ellipse 130% 62% at 50% 0%, rgba(214,255,246,.075), transparent 62%),
     linear-gradient(180deg, rgba(255,255,255,.05) 0%, rgba(0,0,0,.2) 34%, rgba(0,0,0,.44) 100%);
 }
+
+/* =========================================================================
+   v28 · 创建角色页「六角星属性面板」
+   六项核心属性摊在正六边形六个顶点上：网格圈 + 辐条 + 数值多边形 + 顶点数值。
+   SVG 只给颜色语义（网格/标签走 currentColor，多边形走门派色），
+   所以日夜主题自动跟随；尺寸用 width:100% + max-width，窄屏等比缩小。
+   ========================================================================= */
+.si-radar-wrap {
+  max-width: 264px;
+  margin: 4px auto 10px;
+  text-align: center;
+  color: var(--s400);          /* 网格线与标签文字的 currentColor */
+}
+.si-radar {
+  display: block;
+  width: 100%;
+  height: auto;
+  overflow: visible;           /* 顶点标签贴近边缘时不裁切 */
+}
+.si-radar text { font-family: var(--sans); letter-spacing: .02em; }
+.si-radar-note {
+  margin-top: -2px;
+  font-size: 10px;
+  letter-spacing: .02em;
+  color: var(--s600);
+}
+html[data-mode='day'] .si-radar-wrap { color: var(--s400); }
+html[data-mode='day'] .si-radar-note { color: var(--s600); }
 
