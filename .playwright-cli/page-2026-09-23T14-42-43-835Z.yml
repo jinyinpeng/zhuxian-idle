@@ -1,0 +1,59 @@
+- generic [active] [ref=f5e1]:
+  - generic [ref=f5e2]:
+    - generic [ref=f5e3]:
+      - generic [ref=f5e4]:
+        - generic [ref=f5e5]:
+          - button "角色属性" [ref=f5e6]: "3"
+          - generic [ref=f5e7]:
+            - generic [ref=f5e8]:
+              - text: 血凤鸣
+              - generic [ref=f5e9]: 焚香谷
+            - generic [ref=f5e10]: 炼气期二层 · 战力 1.14万
+          - generic [ref=f5e11]:
+            - button "统计" [ref=f5e12] [cursor=pointer]
+            - button "设置" [ref=f5e15] [cursor=pointer]
+        - generic [ref=f5e18]:
+          - generic [ref=f5e19]: "3100"
+          - generic [ref=f5e22]: "108"
+          - generic [ref=f5e25]: "505"
+          - button "挂机开关" [ref=f5e28] [cursor=pointer]: 挂机中
+      - generic:
+        - generic:
+          - button "青云山脚 Lv.1-10" [ref=f5e31] [cursor=pointer]
+          - generic:
+            - generic: "--"
+            - generic: "0"
+        - generic [ref=f5e36] [cursor=pointer]:
+          - generic [ref=f5e38]: 444 / 444
+          - generic [ref=f5e44]:
+            - generic [ref=f5e45]: Lv.3
+            - text: 血凤鸣
+        - generic:
+          - generic: 一群妖物围了上来（3 只）
+          - generic: 施展【御剑术】，造成 184 伤害
+          - generic: 一群妖物围了上来（2 只）
+          - generic: 修为精进，突破至 炼气期二层（Lv.3）
+          - generic: 完成任务【剑试锋芒】，获得 885 修为
+      - generic [ref=f5e46]:
+        - generic [ref=f5e47]:
+          - generic [ref=f5e48]: 自动寻怪中
+          - generic [ref=f5e51]: 0.0 只/分
+        - generic [ref=f5e52]: 1134 / 1476 （76.8%）
+        - generic [ref=f5e55]:
+          - generic [ref=f5e56]: 战力 0
+          - generic [ref=f5e57]: DPS 0
+      - navigation [ref=f5e59]:
+        - button "挂机" [ref=f5e60] [cursor=pointer]
+        - button "行囊 5" [ref=f5e64] [cursor=pointer]:
+          - generic [ref=f5e67]: 行囊
+          - generic [ref=f5e68]: "5"
+        - button "技能" [ref=f5e69] [cursor=pointer]
+        - button "任务" [ref=f5e73] [cursor=pointer]
+        - button "社交" [ref=f5e77] [cursor=pointer]
+      - generic:
+        - generic: Lv.3
+        - generic: 炼气期二层
+    - generic:
+      - generic: 突破 · 炼气期二层
+      - generic: 完成【剑试锋芒】 +885 修为
+  - generic [ref=f5e85]: 请竖屏握持手机

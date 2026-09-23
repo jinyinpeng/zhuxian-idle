@@ -1,0 +1,71 @@
+- generic [ref=f8e84]:
+  - generic [ref=f8e85]:
+    - generic [ref=f8e86]:
+      - button "角色属性" [ref=f8e87]: "1"
+      - generic [ref=f8e88]:
+        - generic [ref=f8e89]:
+          - text: 青剑
+          - generic [ref=f8e90]: 鬼王宗
+        - generic [ref=f8e91]: 炼气期一层 · 战力 9329
+      - generic [ref=f8e92]:
+        - button "统计" [ref=f8e93] [cursor=pointer]
+        - button "设置" [ref=f8e96] [cursor=pointer]
+    - generic [ref=f8e99]:
+      - generic [ref=f8e100]: "675"
+      - generic [ref=f8e103]: "80"
+      - generic [ref=f8e106]: "118"
+      - button "挂机开关" [ref=f8e109] [cursor=pointer]: 挂机中
+  - generic [ref=f8e112] [cursor=pointer]:
+    - generic:
+      - button "青云山脚 Lv.1-10" [ref=f8e116]
+      - generic:
+        - generic: "0"
+        - generic: "0"
+    - generic [ref=f8e121]:
+      - generic [ref=f8e122]:
+        - generic [ref=f8e124]: 286 / 286
+        - generic [ref=f8e130]:
+          - generic [ref=f8e131]: Lv.1
+          - text: 青剑
+      - generic [ref=f8e132]:
+        - generic [ref=f8e133]:
+          - generic [ref=f8e134]:
+            - generic [ref=f8e135]: Lv.4
+            - text: 青云野狼
+          - generic [ref=f8e136]: 0%
+        - generic [ref=f8e140]:
+          - generic [ref=f8e141]:
+            - generic [ref=f8e142]: Lv.4
+            - text: 青云野狼
+          - generic [ref=f8e143]: 0%
+        - generic [ref=f8e147]:
+          - generic [ref=f8e148]:
+            - generic [ref=f8e149]: Lv.7
+            - text: 落石精
+          - generic [ref=f8e150]: 0%
+    - generic: 御剑术
+    - generic:
+      - generic: "-126"
+      - generic: "-126"
+      - generic: "-123"
+      - generic: +24 修为 · +12 金
+      - generic: +24 修为 · +12 金
+      - generic: +54 修为 · +24 金
+    - generic:
+      - generic: 拜入 青云门，仙途自此始。
+      - generic: 一群妖物围了上来（3 只）
+      - generic: 施展【御剑术】，造成 377 伤害
+  - generic [ref=f8e154]:
+    - generic [ref=f8e155]:
+      - generic [ref=f8e156]: 寻找妖物…
+      - generic [ref=f8e159]: 0.0 只/分
+    - generic [ref=f8e160]: 102 / 950 （10.7%）
+    - generic [ref=f8e163]:
+      - generic [ref=f8e164]: 战力 9329
+      - generic [ref=f8e165]: DPS 0
+  - navigation [ref=f8e167]:
+    - button "挂机" [ref=f8e168] [cursor=pointer]
+    - button "行囊" [ref=f8e172] [cursor=pointer]
+    - button "技能" [ref=f8e176] [cursor=pointer]
+    - button "任务" [ref=f8e180] [cursor=pointer]
+    - button "社交" [ref=f8e184] [cursor=pointer]

@@ -1,0 +1,52 @@
+- generic [active] [ref=f7e1]:
+  - generic [ref=f7e3]:
+    - generic [ref=f7e4]:
+      - generic [ref=f7e5]:
+        - button "角色属性" [ref=f7e6]: "6"
+        - generic [ref=f7e7]:
+          - generic [ref=f7e8]:
+            - text: 血凤鸣
+            - generic [ref=f7e9]: 焚香谷
+          - generic [ref=f7e10]: 炼气期四层 · 战力 1.35万
+        - generic [ref=f7e11]:
+          - button "统计" [ref=f7e12] [cursor=pointer]
+          - button "设置" [ref=f7e15] [cursor=pointer]
+      - generic [ref=f7e18]:
+        - generic [ref=f7e19]: "2074"
+        - generic [ref=f7e22]: "135"
+        - generic [ref=f7e25]: "827"
+        - button "挂机开关" [ref=f7e28] [cursor=pointer]: 挂机中
+    - generic:
+      - generic:
+        - button "青云山脚 Lv.1-10" [ref=f7e31] [cursor=pointer]
+        - generic:
+          - generic: "--"
+          - generic: "0"
+      - generic [ref=f7e36] [cursor=pointer]:
+        - generic [ref=f7e38]: 835 / 835
+        - generic [ref=f7e44]:
+          - generic [ref=f7e45]: Lv.6
+          - text: 血凤鸣
+      - generic:
+        - generic: 一群妖物围了上来（2 只）
+        - generic: 一群妖物围了上来（3 只）
+        - generic: 【精制的紫金指环】已强化至 +3
+        - generic: 施展【御剑术】，造成 558 伤害
+        - generic: ★ 妖将现身：守山石灵（Lv.10），率 2 名手下
+    - generic [ref=f7e46]:
+      - generic [ref=f7e47]:
+        - generic [ref=f7e48]: 自动寻怪中
+        - generic [ref=f7e51]: 0.0 只/分
+      - generic [ref=f7e52]: 2310 / 3184 （72.6%）
+      - generic [ref=f7e55]:
+        - generic [ref=f7e56]: 战力 0
+        - generic [ref=f7e57]: DPS 0
+    - navigation [ref=f7e59]:
+      - button "挂机" [ref=f7e60] [cursor=pointer]
+      - button "行囊 35" [ref=f7e64] [cursor=pointer]:
+        - generic [ref=f7e67]: 行囊
+        - generic [ref=f7e68]: "35"
+      - button "技能" [ref=f7e69] [cursor=pointer]
+      - button "任务" [ref=f7e73] [cursor=pointer]
+      - button "社交" [ref=f7e77] [cursor=pointer]
+  - generic [ref=f7e85]: 请竖屏握持手机

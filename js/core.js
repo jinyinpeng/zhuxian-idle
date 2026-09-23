@@ -49,15 +49,16 @@
   function emit(ev, a, b, c) { const l = H[ev]; if (l) for (let i = 0; i < l.length; i++) l[i](a, b, c); }
 
   /* ============================ 境界换算 ============================ */
-  function tierOf(level) { return Math.min(D.TIERS.length - 1, Math.floor((level - 1) / D.TIER_SIZE)); }
+  /* 境界不设上限：tierOf 不再夹紧到最后一个具名境界，
+     超过 11 重天之后由 D.tierNameOf 继续生成（仙君/仙王/…/无极，然后按「转」循环）。 */
+  function tierOf(level) { return Math.floor((level - 1) / D.TIER_SIZE); }
   function realmName(level) {
-    if (level >= D.MAX_LEVEL) return '真仙 · 圆满';
     const t = tierOf(level);
     const local = (level - 1) % D.TIER_SIZE;
     const li = Math.min(8, Math.floor(local * 9 / D.TIER_SIZE));
-    return D.TIERS[t] + D.LAYERS[li];
+    return D.tierNameOf(t) + D.LAYERS[li];
   }
-  function tierName(level) { return D.TIERS[tierOf(level)]; }
+  function tierName(level) { return D.tierNameOf(tierOf(level)); }
 
   /* ============================ 数值公式 ============================ */
   function expNeed(level) {
@@ -575,6 +576,24 @@
     G.bag.push(it);
     emit('drop', it);
   }
+  /* ============================ 钻石宝阁 ============================
+     与掉落不同：这里买到的装备「品相 + 强化 + 等阶」全部保底，
+     并且等阶跟随当前修为 —— 花钻石换的是确定性与省时间，不是碰运气。 */
+  function buyShop(id) {
+    const sp = (D.SHOP || []).find(x => x.id === id);
+    if (!sp) return { ok: false, msg: '商品不存在' };
+    if (G.res.yuanbao < sp.price) return { ok: false, msg: '钻石不足，需 ' + sp.price + ' 钻石' };
+    if (G.bag.length >= 60) return { ok: false, msg: '行囊已满，先清出空位再买' };
+    G.res.yuanbao -= sp.price;
+    const slotId = sp.slot || pick(D.SLOTS).id;
+    const it = makeItem(G.level + sp.ilvlOff, true, { quality: sp.quality, slot: slotId });
+    it.enh = Math.min(ENH_MAX, sp.enh);
+    it.shop = 1;
+    G.bag.push(it);                      /* 直接入袋：不能走 grantItem，避免被自动出售吃掉 */
+    emit('drop', it);
+    return { ok: true, item: it };
+  }
+
   /* ============================ 强化 ============================ */
   const ENH_MAX = 15;
   const ENH_RATE = [1, 1, 1, 0.95, 0.90, 0.85, 0.78, 0.70, 0.62, 0.54, 0.46, 0.38, 0.30, 0.23, 0.17];
@@ -630,7 +649,7 @@
 
   function seekTreasure() {
     const cost = 60;
-    if (G.res.yuanbao < cost) return { ok: false, msg: '元宝不足，需 ' + cost + ' 元宝' };
+    if (G.res.yuanbao < cost) return { ok: false, msg: '钻石不足，需 ' + cost + ' 钻石' };
     G.res.yuanbao -= cost;
     G.stats.treasure++;
     const qId = clamp(rollQuality(G.level, true) + 1, 0, 5);
@@ -1160,7 +1179,7 @@
     getQuestList, claimQuest, questLabel,
     getRank, giftFriend,
     switchRegion, toggleAuto, seekTreasure, enhance,
-    makeItem, grantItem,
+    makeItem, grantItem, buyShop,
     tick, createCharacter, attachState, offlineApply, estimateKillRate,
     save, load, reset, dayKey,
     get state() { return G; },

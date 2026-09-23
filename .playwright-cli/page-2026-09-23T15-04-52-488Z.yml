@@ -1,0 +1,126 @@
+- generic [ref=f1e3]:
+  - generic [ref=f1e4]:
+    - generic [ref=f1e400]:
+      - button "角色属性" [ref=f1e401]: "8"
+      - generic [ref=f1e402]:
+        - generic [ref=f1e403]:
+          - text: 青剑
+          - generic [ref=f1e404]: 鬼王宗
+        - generic [ref=f1e405]: 炼气期五层 · 战力 1.51万
+      - generic [ref=f1e406]:
+        - button "统计" [ref=f1e407] [cursor=pointer]
+        - button "设置" [ref=f1e410] [cursor=pointer]
+    - generic [ref=f1e413]:
+      - generic [ref=f1e414]: "2217"
+      - generic [ref=f1e417]: "3000"
+      - generic [ref=f1e420]: "908"
+      - button "挂机开关" [ref=f1e423] [cursor=pointer]: 挂机中
+  - generic [ref=f1e31] [cursor=pointer]:
+    - generic:
+      - button "幽泉谷 Lv.10-22" [ref=f1e116]
+      - generic:
+        - generic: 1.71万
+        - generic: "56"
+    - generic [ref=f1e40]:
+      - generic [ref=f1e41]:
+        - generic [ref=f1e43]: 1115 / 1158
+        - generic [ref=f1e49]:
+          - generic [ref=f1e50]: Lv.7
+          - text: 青剑
+      - generic [ref=f1e117]:
+        - generic [ref=f1e426]:
+          - generic [ref=f1e427]:
+            - generic [ref=f1e430]: Lv.22
+            - text: 幽泉老鬼
+          - generic [ref=f1e431]: 68%
+        - generic [ref=f1e435]:
+          - generic [ref=f1e436]:
+            - generic [ref=f1e437]: Lv.16
+            - text: 噬魂蛛
+          - generic [ref=f1e438]: 0%
+        - generic [ref=f1e441]:
+          - generic [ref=f1e442]:
+            - generic [ref=f1e443]: Lv.21
+            - text: 寒潭尸傀
+          - generic [ref=f1e444]: 0%
+    - generic:
+      - generic: "-732"
+      - generic: "-755"
+      - generic: "-736"
+      - generic: +139 修为 · +80 金
+      - generic: +233 修为 · +121 金
+      - generic: "-80"
+      - generic: "-232"
+    - generic:
+      - generic: 施展【破剑式】，造成 2643 伤害
+      - generic: 一群妖物围了上来（2 只）
+      - generic: 施展【御剑术】，造成 1510 伤害
+      - generic: ★ 妖将现身：幽泉老鬼（Lv.22），率 2 名手下
+      - generic: 施展【御剑术】，造成 2224 伤害
+  - generic [ref=f1e51]:
+    - generic [ref=f1e52]:
+      - generic [ref=f1e53]: 激战中 · 幽泉老鬼
+      - generic [ref=f1e56]: 52.4 只/分
+    - generic [ref=f1e57]: 3774 / 4917 （76.8%）
+    - generic [ref=f1e60]:
+      - generic [ref=f1e61]: 战力 1.51万
+      - generic [ref=f1e62]: DPS 250
+  - navigation [ref=f1e64]:
+    - button "挂机" [ref=f1e65] [cursor=pointer]
+    - button "行囊 2" [ref=f1e447] [cursor=pointer]:
+      - generic [ref=f1e72]: 行囊
+      - generic [ref=f1e448]: "2"
+    - button "技能" [ref=f1e74] [cursor=pointer]
+    - button "任务" [ref=f1e78] [cursor=pointer]
+    - button "社交" [ref=f1e82] [cursor=pointer]
+  - generic [ref=f1e86]:
+    - generic [ref=f1e449]:
+      - generic [ref=f1e450]: 行囊35/60
+      - button [ref=f1e451] [cursor=pointer]
+    - generic [ref=f1e454]:
+      - button "装备" [ref=f1e455] [cursor=pointer]
+      - button "行囊" [ref=f1e458] [cursor=pointer]
+      - button "宝阁" [active] [ref=f1e461] [cursor=pointer]
+    - generic [ref=f1e464]:
+      - generic [ref=f1e564]: 宝阁 · 现有 3000 钻石
+      - generic [ref=f1e567]: 店内装备的等阶随修为成长（当前 Lv.8）。品相、强化与词条全部保底 —— 花钻石买的是确定性与省时间。
+      - generic [ref=f1e568]:
+        - generic [ref=f1e569]:
+          - text: 天品天品灵装
+          - generic [ref=f1e570]: "68"
+        - generic [ref=f1e573]: 天品一件 · 随机部位 · 等阶 +3 · 自带强化 +3
+        - generic [ref=f1e574]: 部位 随机 · 等阶 Lv.11 · 强化 +3 · 词条 4 条
+        - button "花 68 钻石购买" [ref=f1e575] [cursor=pointer]
+      - generic [ref=f1e578]:
+        - generic [ref=f1e579]:
+          - text: 仙品仙品灵宝
+          - generic [ref=f1e580]: "168"
+        - generic [ref=f1e583]: 仙品一件 · 随机部位 · 等阶 +5 · 自带强化 +5
+        - generic [ref=f1e584]: 部位 随机 · 等阶 Lv.13 · 强化 +5 · 词条 5 条
+        - button "花 168 钻石购买" [ref=f1e585] [cursor=pointer]
+      - generic [ref=f1e588]:
+        - generic [ref=f1e589]:
+          - text: 仙品本命法宝
+          - generic [ref=f1e590]: "328"
+        - generic [ref=f1e593]: 仙品法宝 · 等阶 +8 · 自带强化 +8 · 满词条
+        - generic [ref=f1e594]: 部位 法宝 · 等阶 Lv.16 · 强化 +8 · 词条 5 条
+        - button "花 328 钻石购买" [ref=f1e595] [cursor=pointer]
+      - generic [ref=f1e598]:
+        - generic [ref=f1e599]:
+          - text: 仙品护道战甲
+          - generic [ref=f1e600]: "328"
+        - generic [ref=f1e603]: 仙品战甲 · 等阶 +8 · 自带强化 +8 · 满词条
+        - generic [ref=f1e604]: 部位 战甲 · 等阶 Lv.16 · 强化 +8 · 词条 5 条
+        - button "花 328 钻石购买" [ref=f1e605] [cursor=pointer]
+      - generic [ref=f1e608]:
+        - generic [ref=f1e609]:
+          - text: 仙品诛仙至宝
+          - generic [ref=f1e610]: "888"
+        - generic [ref=f1e613]: 仙品一件 · 随机部位 · 等阶 +12 · 自带强化 +12（强化上限）
+        - generic [ref=f1e614]: 部位 随机 · 等阶 Lv.20 · 强化 +12 · 词条 5 条
+        - button "花 888 钻石购买" [ref=f1e615] [cursor=pointer]
+      - generic [ref=f1e618]: 钻石来自任务奖励与寻宝回馈；买到手即刻入行囊。
+    - generic [ref=f1e619]:
+      - button "寻宝 60" [ref=f1e620] [cursor=pointer]
+      - button "出售凡品" [ref=f1e623] [cursor=pointer]
+      - button "出售≤灵品" [ref=f1e624] [cursor=pointer]

@@ -485,9 +485,14 @@
      可信度，已改用 mob-art.js 的矢量立绘。
      日后若换上真正的写实立绘（透明底或纯黑底都行，纯黑底由 CSS 的 screen 混合去底），
      把下面两行取消注释即可重新优先使用图片。 */
+  /* v29：怪物立绘改用 AI 写实图（此前是因为旧图几乎全透明才退回矢量）。
+     文件缺失时由 imgFig 的 onerror 自动回退到 mob-art.js 的矢量立绘 ✓ */
   var MOB_IMG = {
-    /* beast: 'assets/mob_beast.png', */
-    /* demon: 'assets/mob_demon.png' */
+    beast: 'assets/mob_beast_art.png',
+    ghost: 'assets/mob_ghost_art.png',
+    demon: 'assets/mob_demon_art.png',
+    human: 'assets/mob_human_art.png',
+    boss: 'assets/mob_boss_art.png'
   };
   /* 女版立绘（放在 assets 下即自动生效，例如 hero_qingyun_f.png；缺失则回退到通用图） */
   /* 女版立绘：现有通用女性形象 hero_female.png；
@@ -637,7 +642,7 @@
     return imgFig(src, { key: 'hm:' + sectId, svg: heroSvgCached(sectId) });
   }
   function monster(family, elite) {
-    var src = MOB_IMG[family];
+    var src = ver(MOB_IMG[family]);
     if (!src) return monsterSvgCached(family, elite);
     return imgFig(src, {
       cls: elite ? 'elite' : '',

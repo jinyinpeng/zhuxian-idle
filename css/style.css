@@ -3376,3 +3376,27 @@ html[data-mode='day'] .grade2::before { opacity: .2; mix-blend-mode: soft-light;
 html[data-mode='day'] .si-radar-wrap { color: var(--s400); }
 html[data-mode='day'] .si-radar-note { color: var(--s600); }
 
+/* ============================ 钻石宝阁 ============================ */
+.shop-hint { font-size: 11px; color: var(--s500); line-height: 1.75; margin: 2px 0 10px; }
+.shop-card {
+  padding: 10px 11px; margin-bottom: 8px;
+  border-radius: var(--r); border: 1px solid var(--line-2);
+  background: rgba(0, 0, 0, .3);
+}
+.shop-top { display: flex; align-items: center; gap: 7px; }
+.shop-q {
+  flex: none; font-size: 10px; font-weight: 700; letter-spacing: .1em;
+  padding: 1px 6px; border-radius: 999px; border: 1px solid currentColor;
+}
+.shop-name {
+  flex: 1; min-width: 0; font-family: var(--serif); font-size: 13.5px; font-weight: 700;
+  letter-spacing: .06em; color: var(--text-1);
+}
+.shop-price { flex: none; display: inline-flex; align-items: center; gap: 3px; font-size: 12px; font-weight: 700; color: #7dd3fc; }
+.shop-price.no { color: var(--text-4); }
+.shop-desc { font-size: 11px; color: var(--text-2); margin-top: 5px; line-height: 1.6; }
+.shop-stat { font-size: 10.5px; color: var(--text-3); margin-top: 4px; font-variant-numeric: tabular-nums; }
+.sheet-note { font-size: 10.5px; color: var(--text-3); margin-top: 10px; line-height: 1.8; }
+html[data-mode='day'] .shop-card { background: #ffffff; border-color: rgba(23, 33, 43, .12); }
+html[data-mode='day'] .shop-price { color: #0369a1; }
+

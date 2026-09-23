@@ -183,6 +183,7 @@
       return [
         (s.bag || []).length,
         UI.tab.bag,
+        s.res.yuanbao,          /* 宝阁按钮的可用态与钻石余额有关，必须进签名 */
         (s.bag || []).filter(i => i.isNew).length,
         Object.keys(s.equipped || {}).map(k => (s.equipped[k] && s.equipped[k].uid) || '-').join(','),
         /* 选中项必须参与签名：否则「点选某件装备」时签名不变，
@@ -244,6 +245,36 @@
       '</div>';
   }
 
+  /* ============================ 钻石宝阁 ============================ */
+  /* 用钻石直接买高阶装备：品相 / 强化 / 词条全保底，等阶随修为成长 */
+  function shopBody() {
+    const s = G.state;
+    const L = s.level;
+    let b = '<div class="section-title">' + ic('gem', 'ic-xs') + ' 宝阁 · 现有 ' + G.fmt(s.res.yuanbao) + ' 钻石</div>';
+    b += '<div class="shop-hint">店内装备的等阶随修为成长（当前 Lv.' + L + '）。' +
+      '品相、强化与词条全部保底 —— 花钻石买的是确定性与省时间。</div>';
+    D.SHOP.forEach(sp => {
+      const q = D.QUALITIES[sp.quality];
+      const slot = sp.slot ? D.SLOTS.find(x => x.id === sp.slot) : null;
+      const can = s.res.yuanbao >= sp.price;
+      b += '<div class="shop-card" style="border-color:' + hexA(q.color, .45) + '">' +
+        '<div class="shop-top">' +
+          '<span class="shop-q" style="color:' + q.color + '">' + q.name + '</span>' +
+          '<span class="shop-name">' + sp.name + '</span>' +
+          '<span class="shop-price' + (can ? '' : ' no') + '">' + ic('gem', 'ic-xs') + sp.price + '</span>' +
+        '</div>' +
+        '<div class="shop-desc">' + sp.desc + '</div>' +
+        '<div class="shop-stat">部位 ' + (slot ? slot.name : '随机') + ' · 等阶 Lv.' + (L + sp.ilvlOff) +
+          ' · 强化 +' + sp.enh + ' · 词条 ' + q.affix + ' 条</div>' +
+        '<button class="btn ' + (can ? 'gold' : '') + ' sm" style="width:100%;margin-top:8px" ' +
+          'data-act="buy" data-v="' + sp.id + '"' + (can ? '' : ' disabled') + '>' +
+          ic('gem', 'ic-xs') + ' 花 ' + sp.price + ' 钻石购买</button>' +
+        '</div>';
+    });
+    b += '<div class="sheet-note">钻石来自任务奖励与寻宝回馈；买到手即刻入行囊。</div>';
+    return b;
+  }
+
   /* ============================ 行囊面板 ============================ */
   function sheetBag() {
     const s = G.state;
@@ -262,6 +293,8 @@
           '<span class="slot-lab">' + sl.name + '</span>' +
           '</div>';
       }).join('') + '</div>';
+    } else if (tab === 'shop') {
+      body += shopBody();
     } else {
       const bag = s.bag;
       if (!bag.length) {
@@ -281,14 +314,17 @@
       }
     }
 
-    // 详情
-    const ref = UI.bagSel ? G.findItem(UI.bagSel) : null;
-    if (ref) body += itemDetail(ref);
+    if (tab !== 'shop') {
+      // 详情
+      const ref = UI.bagSel ? G.findItem(UI.bagSel) : null;
+      if (ref) body += itemDetail(ref);
+    }
 
     return head('行囊', s.bag.length + '/60') +
       '<div class="sheet-tabs seg">' +
         '<button class="tab' + (tab === 'equip' ? ' on' : '') + '" data-act="bagtab" data-v="equip">' + ic('shield', 'ic-xs') + ' 装备</button>' +
         '<button class="tab' + (tab === 'bag' ? ' on' : '') + '" data-act="bagtab" data-v="bag">' + ic('package', 'ic-xs') + ' 行囊</button>' +
+        '<button class="tab' + (tab === 'shop' ? ' on' : '') + '" data-act="bagtab" data-v="shop">' + ic('gem', 'ic-xs') + ' 宝阁</button>' +
       '</div>' +
       '<div class="sheet-body">' + body + '</div>' +
       '<div class="sheet-foot">' +
@@ -410,7 +446,8 @@
       stone: Math.floor(3 + nextLv * 2.4 + idx * 2)
     };
   }
-  function maxSkillLv() { return Math.min(20, 1 + Math.floor(G.state.level / 6)); }
+  /* 功法等级不设上限：随人物等级持续解锁（每 6 级 +1 级上限） */
+  function maxSkillLv() { return 1 + Math.floor(G.state.level / 6); }
 
   /* ============================ 任务面板 ============================ */
   function sheetQuest() {
@@ -429,7 +466,7 @@
       '<div style="font-size:11.5px;color:#78716c;line-height:1.75">' +
       '· 主线任务随修为推进，完成后自动接取下一环<br/>' +
       '· 支线任务达到对应等级后自动接取<br/>' +
-      '· 日常任务每日 0 点刷新，可获得大量元宝与强化石</div>';
+      '· 日常任务每日 0 点刷新，可获得大量钻石与强化石</div>';
 
     return head('仙缘任务', claimableCount(list) + ' 个可领取') +
       '<div class="sheet-tabs seg">' +
@@ -518,7 +555,7 @@
         '</div>'
       ).join('');
       body += '<div class="section-title" style="margin-top:16px">' + ic('gift', 'ic-xs') + ' 说明</div>' +
-        '<div style="font-size:11.5px;color:#78716c;line-height:1.75">每位好友每日可赠礼一次，赠礼可获得元宝与金币回馈。好友等级会随修行自行提升。</div>';
+        '<div style="font-size:11.5px;color:#78716c;line-height:1.75">每位好友每日可赠礼一次，赠礼可获得钻石与金币回馈。好友等级会随修行自行提升。</div>';
     } else {
       /* 修行统计取的是累计计数，来自存档 st.stats；
          此前误写成 G.stats()（战斗属性），导致时长/击杀等全渲染成 NaN 与 0 */
@@ -568,6 +605,13 @@
     const s = G.state;
     switch (act) {
       case 'bagtab': UI.tab.bag = node.getAttribute('data-v'); renderSheet('bag'); break;
+      case 'buy': {
+        const r = G.buyShop(node.getAttribute('data-v'));
+        if (r.ok) R.toast('购得「' + r.item.name + '」，已放入行囊', 'gold');
+        else R.toast(r.msg, 'bad');
+        renderSheet('bag');
+        break;
+      }
       case 'qtab': UI.tab.quest = node.getAttribute('data-v'); renderSheet('quest'); UI.questSig = questSig(); break;
       case 'stab': UI.tab.social = node.getAttribute('data-v'); renderSheet('social'); break;
       case 'sel': {
@@ -725,7 +769,7 @@
       case 'gift': {
         const r = G.giftFriend(node.getAttribute('data-n'));
         if (!r.ok) R.toast(r.msg, 'bad');
-        else R.toast('赠礼成功，回赠 ' + r.yuanbao + ' 元宝', 'gold');
+        else R.toast('赠礼成功，回赠 ' + r.yuanbao + ' 钻石', 'gold');
         renderSheet('social'); renderTop();
         break;
       }
@@ -1173,7 +1217,7 @@
     let b = '<div class="section-title">' + ic('scroll-text', 'ic-xs') + ' 基础信息</div>';
     const base = [
       ['道号', esc(s.name)],
-      ['等级', 'Lv.' + s.level + ' / ' + D.MAX_LEVEL],
+      ['等级', 'Lv.' + s.level + '（无上限）'],
       ['境界', esc(G.realmName(s.level))],
       ['门派', esc(sect.name) + ' · ' + esc(sect.tag)],
       ['性别', s.gender === 'female' ? '女' : '男'],
@@ -1397,8 +1441,23 @@
     const leftPot = Math.max(0, s.level - 1 - usedPot);
     const breaks = Math.floor((s.level - 1) / D.TIER_SIZE);
 
+    /* 阶梯不设上限：11 重具名境界之后继续按「转」延伸。
+       已进入延伸段时，只列到当前境界为止的最近 4 重 —— 免得渲染几百行。 */
+    const rows = [];
+    if (t < D.TIERS.length) {
+      for (let i = 0; i <= t; i++) rows.push(i);
+    } else {
+      for (let i = 0; i < D.TIERS.length; i++) rows.push(i);
+      rows.push(-1);
+      for (let i = Math.max(D.TIERS.length, t - 3); i <= t; i++) rows.push(i);
+    }
     let ladder = '';
-    D.TIERS.forEach((name, i) => {
+    rows.forEach(i => {
+      if (i < 0) {
+        ladder += '<div class="tier-row more"><span class="t-name">…… 已越 ' +
+          G.fmt(t - D.TIERS.length + 1) + ' 重 ……</span></div>';
+        return;
+      }
       const lo = i * D.TIER_SIZE + 1;
       const hi = (i + 1) * D.TIER_SIZE;
       const on = i === t;
@@ -1406,7 +1465,7 @@
       const stateTx = on ? '当前' : locked ? '未至' : '已越';
       ladder += '<div class="tier-row' + (on ? ' on' : '') + (locked ? ' locked' : '') + '">' +
         '<span class="t-no">' + (i + 1) + '</span>' +
-        '<span class="t-name">' + name + '</span>' +
+        '<span class="t-name">' + D.tierNameOf(i) + '</span>' +
         '<span class="t-rng">Lv.' + lo + ' - ' + hi + '</span>' +
         '<span class="t-st">' + stateTx + '</span>' +
         '</div>';
@@ -1415,11 +1474,11 @@
     const body =
       '<div class="lv-head">' +
         '<div class="lv-realm">' + esc(G.realmName(s.level)) + '</div>' +
-        '<div class="lv-sub">Lv.' + s.level + ' / ' + D.MAX_LEVEL + ' · 战力 ' + G.fmt(st.power) + '</div>' +
+        '<div class="lv-sub">Lv.' + s.level + '（无上限） · 战力 ' + G.fmt(st.power) + '</div>' +
       '</div>' +
       '<div class="bar-exp" style="height:14px"><i style="width:' + (er * 100).toFixed(2) + '%"></i><span>' + expTx + '</span></div>' +
       '<div class="offline-grid" style="margin-top:12px">' +
-        '<div class="offline-cell"><div class="oc-val">' + inTier + ' / ' + D.TIER_SIZE + '</div><div class="oc-lab">' + esc(D.TIERS[t]) + ' 进度</div></div>' +
+        '<div class="offline-cell"><div class="oc-val">' + inTier + ' / ' + D.TIER_SIZE + '</div><div class="oc-lab">' + esc(G.tierName(s.level)) + ' 进度</div></div>' +
         '<div class="offline-cell"><div class="oc-val">' + (atMax ? '—' : toNext + ' 级') + '</div><div class="oc-lab">距下一境界</div></div>' +
         '<div class="offline-cell"><div class="oc-val">' + G.fmt(leftPot) + '</div><div class="oc-lab">可用潜能</div></div>' +
         '<div class="offline-cell"><div class="oc-val">' + G.fmt(breaks) + ' 次</div><div class="oc-lab">已突破</div></div>' +
@@ -1427,7 +1486,8 @@
       '<div class="section-title">' + ic('award', 'ic-xs') + ' 境界阶梯</div>' +
       '<div class="tier-list">' + ladder + '</div>' +
       '<div style="font-size:11px;color:#78716c;margin-top:10px;line-height:1.75">' +
-        '· 每 ' + D.TIER_SIZE + ' 级跨越一个境界，共 ' + D.TIERS.length + ' 重天<br/>' +
+        '· 每 ' + D.TIER_SIZE + ' 级跨越一个境界，境界与等级均无上限<br/>' +
+        '· 越过 11 重天（真仙）后进入仙君 · 仙王 · …. · 无极，再按「转」循环攀升<br/>' +
         '· 提升境界可解锁更高阶功法与更强词条掉落</div>';
 
     openModal({

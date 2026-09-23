@@ -9,7 +9,20 @@
   const TIERS = ['炼气期', '筑基期', '金丹期', '元婴期', '化神期', '炼虚期', '合体期', '大乘期', '渡劫期', '散仙', '真仙'];
   const LAYERS = ['一层', '二层', '三层', '四层', '五层', '六层', '七层', '八层', '九层'];
   const TIER_SIZE = 15;
-  const MAX_LEVEL = TIERS.length * TIER_SIZE; // 165
+  /* 等级与境界不设上限：MAX_LEVEL 只是「实际上到不了」的存档兜底边界，
+     真正的边界是浮点精度（1e6 级的修为需求约 3e13，远未溢出）。
+     具名的 11 个境界走完之后，按「转」继续生成 —— 九转之上再九转，
+     理论上没有尽头。 */
+  const MAX_LEVEL = 999999;
+  const BEYOND = ['仙君', '仙王', '仙帝', '仙尊', '太乙金仙', '大罗金仙',
+    '准圣', '圣人', '混元', '鸿蒙', '太初', '无极'];
+  function tierNameOf(t) {
+    if (t < TIERS.length) return TIERS[t];
+    const n = t - TIERS.length;                        /* 真仙之后的第 n 重 */
+    const name = BEYOND[n % BEYOND.length];
+    const cycle = Math.floor(n / BEYOND.length);
+    return cycle ? (name + '·' + (cycle + 1) + '转') : name;
+  }
 
   /* ---------------------------------------------------------------- 门派 */
   const SECTS = [
@@ -309,6 +322,18 @@
 
   const GUILDS = ['天音阁', '焚香谷', '青云门', '鬼王宗', '合欢派', '诛仙殿', '幽冥府'];
 
+  /* --------------------------------------------------------- 钻石宝阁 */
+  /* 用钻石直接购买的高阶装备：不走掉落的随机权重，买到的必是高品相、自带强化，
+     且等阶 = 当前修为 + 偏移 —— 越到后期买到的东西越强，不会因等级成长被淘汰。
+     这就是「更华丽的装备」的来源。 */
+  const SHOP = [
+    { id: 'sp1', name: '天品灵装', desc: '天品一件 · 随机部位 · 等阶 +3 · 自带强化 +3', quality: 4, ilvlOff: 3, enh: 3, price: 68 },
+    { id: 'sp2', name: '仙品灵宝', desc: '仙品一件 · 随机部位 · 等阶 +5 · 自带强化 +5', quality: 5, ilvlOff: 5, enh: 5, price: 168 },
+    { id: 'sp3', name: '本命法宝', desc: '仙品法宝 · 等阶 +8 · 自带强化 +8 · 满词条', quality: 5, ilvlOff: 8, enh: 8, slot: 'talisman', price: 328 },
+    { id: 'sp4', name: '护道战甲', desc: '仙品战甲 · 等阶 +8 · 自带强化 +8 · 满词条', quality: 5, ilvlOff: 8, enh: 8, slot: 'body', price: 328 },
+    { id: 'sp5', name: '诛仙至宝', desc: '仙品一件 · 随机部位 · 等阶 +12 · 自带强化 +12（强化上限）', quality: 5, ilvlOff: 12, enh: 12, price: 888 }
+  ];
+
   /* ------------------------------------------------------- 装备名生成 */
   function makeItemName(qualityId, slotId) {
     const q = QUALITIES[qualityId];
@@ -320,7 +345,8 @@
   }
 
   global.DATA = {
-    TIERS, LAYERS, TIER_SIZE, MAX_LEVEL,
+    TIERS, LAYERS, BEYOND, tierNameOf, TIER_SIZE, MAX_LEVEL,
+    SHOP,
     SECTS, SKILL_TEMPLATES, POTENTIAL,
     SLOTS, QUALITIES, AFFIXES,
     REGIONS, MAIN_QUESTS, SIDE_QUESTS, DAILY_QUESTS,

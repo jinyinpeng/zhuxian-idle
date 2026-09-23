@@ -1,0 +1,50 @@
+- generic [ref=e3]:
+  - generic [ref=e4]:
+    - generic [ref=e5]:
+      - button "角色属性" [ref=e6]: "3"
+      - generic [ref=e7]:
+        - generic [ref=e8]:
+          - text: 青剑
+          - generic [ref=e9]: 鬼王宗
+        - generic [ref=e10]: 炼气期二层 · 战力 1.13万
+      - generic [ref=e11]:
+        - button "统计" [ref=e12] [cursor=pointer]
+        - button "设置" [ref=e15] [cursor=pointer]
+    - generic [ref=e18]:
+      - generic [ref=e19]: "1254"
+      - generic [ref=e22]: "98"
+      - generic [ref=e25]: "423"
+      - button "挂机开关" [ref=e28] [cursor=pointer]: 挂机中
+  - generic [ref=e31] [cursor=pointer]:
+    - generic:
+      - button "青云山脚 Lv.1-10" [ref=e35]
+      - generic:
+        - generic: "--"
+        - generic: "0"
+    - generic [ref=e41]:
+      - generic [ref=e43]: 399 / 467
+      - generic [ref=e49]:
+        - generic [ref=e50]: Lv.3
+        - text: 青剑
+    - generic:
+      - generic: 修为精进，突破至 炼气期二层（Lv.3）
+      - generic: 施展【御剑术】，造成 259 伤害
+      - generic: 装备【诛仙的玄龟铠·九霄】
+      - generic: 击杀妖将【守山石灵】，获得 594 修为
+      - generic: 施展【御剑术】，造成 266 伤害
+  - generic [ref=e51]:
+    - generic [ref=e52]:
+      - generic [ref=e53]: 自动寻怪中
+      - generic [ref=e56]: 0.0 只/分
+    - generic [ref=e57]: 741 / 1476 （50.2%）
+    - generic [ref=e60]:
+      - generic [ref=e61]: 战力 0
+      - generic [ref=e62]: DPS 0
+  - navigation [ref=e64]:
+    - button "挂机" [ref=e65] [cursor=pointer]
+    - button "行囊 2" [ref=e69] [cursor=pointer]:
+      - generic [ref=e72]: 行囊
+      - generic [ref=e73]: "2"
+    - button "技能" [ref=e74] [cursor=pointer]
+    - button "任务" [ref=e78] [cursor=pointer]
+    - button "社交" [ref=e82] [cursor=pointer]
