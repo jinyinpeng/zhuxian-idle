@@ -1,0 +1,50 @@
+- generic [ref=f7e3]:
+  - generic [ref=f7e4]:
+    - generic [ref=f7e5]:
+      - button "角色属性" [ref=f7e6]: "163"
+      - generic [ref=f7e7]:
+        - generic [ref=f7e8]:
+          - text: 青剑
+          - generic [ref=f7e9]: 鬼王宗
+        - generic [ref=f7e10]: 真仙八层 · 战力 30.2万
+      - generic [ref=f7e11]:
+        - button "统计" [ref=f7e12] [cursor=pointer]
+        - button "设置" [ref=f7e15] [cursor=pointer]
+    - generic [ref=f7e18]:
+      - generic [ref=f7e19]: 1254万
+      - generic [ref=f7e22]: "1171"
+      - generic [ref=f7e25]: 2.49万
+      - button "挂机开关" [ref=f7e28] [cursor=pointer]: 挂机中
+  - generic [ref=f7e31] [cursor=pointer]:
+    - generic:
+      - button "诛仙剑阵 Lv.104-165" [ref=f7e35]
+      - generic:
+        - generic: "--"
+        - generic: "0"
+    - generic [ref=f7e41]:
+      - generic [ref=f7e43]: 12.6万 / 12.6万
+      - generic [ref=f7e49]:
+        - generic [ref=f7e50]: Lv.163
+        - text: 青剑
+    - generic:
+      - generic: 击杀妖将【诛仙剑主】，获得 10.5万 修为
+      - generic: 一群妖物围了上来（2 只）
+      - generic: 施展【破剑式】，造成 63.7万 伤害
+      - generic: 一群妖物围了上来（3 只）
+      - generic: ★ 妖将现身：诛仙剑主（Lv.150），率 1 名手下
+  - generic [ref=f7e51]:
+    - generic [ref=f7e52]:
+      - generic [ref=f7e53]: 自动寻怪中
+      - generic [ref=f7e56]: 0.0 只/分
+    - generic [ref=f7e57]: 138万 / 144万 （95.9%）
+    - generic [ref=f7e60]:
+      - generic [ref=f7e61]: 战力 0
+      - generic [ref=f7e62]: DPS 0
+  - navigation [ref=f7e64]:
+    - button "挂机" [ref=f7e65] [cursor=pointer]
+    - button "行囊 58" [ref=f7e69] [cursor=pointer]:
+      - generic [ref=f7e72]: 行囊
+      - generic [ref=f7e73]: "58"
+    - button "技能" [ref=f7e74] [cursor=pointer]
+    - button "任务" [ref=f7e78] [cursor=pointer]
+    - button "社交" [ref=f7e82] [cursor=pointer]

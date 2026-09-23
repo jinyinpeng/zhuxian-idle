@@ -1,0 +1,79 @@
+- generic [ref=f6e2]:
+  - generic [ref=f6e3]:
+    - generic [ref=f6e4]:
+      - generic [ref=f6e5]:
+        - button "角色属性" [ref=f6e6]: "79"
+        - generic [ref=f6e7]:
+          - generic [ref=f6e8]:
+            - text: 血凤鸣
+            - generic [ref=f6e9]: 焚香谷
+          - generic [ref=f6e10]: 炼虚期二层 · 战力 7.38万
+        - generic [ref=f6e11]:
+          - button "统计" [ref=f6e12] [cursor=pointer]
+          - button "设置" [ref=f6e15] [cursor=pointer]
+      - generic [ref=f6e18]:
+        - generic [ref=f6e19]: 199万
+        - generic [ref=f6e22]: "383"
+        - generic [ref=f6e25]: "6147"
+        - button "挂机开关" [ref=f6e28] [cursor=pointer]: 挂机中
+    - generic [ref=f6e31] [cursor=pointer]:
+      - generic:
+        - button "女娲神庙 Lv.66-84" [ref=f6e35]
+        - generic:
+          - generic: 242万
+          - generic: "420"
+      - generic [ref=f6e40]:
+        - generic [ref=f6e41]:
+          - generic [ref=f6e43]: 3.67万 / 3.67万
+          - generic [ref=f6e49]:
+            - generic [ref=f6e50]: Lv.79
+            - text: 血凤鸣
+        - generic [ref=f6e52]:
+          - generic [ref=f6e53]:
+            - generic [ref=f6e54]: Lv.74
+            - text: 女娲残念
+          - generic [ref=f6e55]: 0%
+      - generic: 诛仙剑诀
+      - generic:
+        - generic: "-12万"
+        - generic: "+5375"
+        - generic: +4425 修为 · +885 金
+      - generic:
+        - generic: 完成任务【每日修行】，获得 12万 修为
+        - generic: 修为精进，突破至 炼虚期二层（Lv.79）
+        - generic: 完成任务【每日顿悟】，获得 15.8万 修为
+        - generic: 施展【诛仙剑诀】，造成 12万 伤害
+        - generic: 装备【天罡的赤霄枪·焚天】
+    - generic [ref=f6e58]:
+      - generic [ref=f6e59]:
+        - generic [ref=f6e60]: 寻找妖物…
+        - generic [ref=f6e63]: 82.3 只/分
+      - generic [ref=f6e64]: 19.1万 / 35.2万 （54.4%）
+      - generic [ref=f6e67]:
+        - generic [ref=f6e68]: 战力 7.37万
+        - generic [ref=f6e69]: DPS 2.69万
+    - navigation [ref=f6e71]:
+      - button "挂机" [ref=f6e72] [cursor=pointer]
+      - button "行囊 60" [ref=f6e76] [cursor=pointer]:
+        - generic [ref=f6e79]: 行囊
+        - generic [ref=f6e80]: "60"
+      - button "技能" [ref=f6e81] [cursor=pointer]
+      - button "任务" [ref=f6e85] [cursor=pointer]
+      - button "社交" [ref=f6e89] [cursor=pointer]
+    - generic:
+      - generic: Lv.76
+      - generic: 炼虚期一层
+    - generic:
+      - generic: Lv.77
+      - generic: 炼虚期一层
+    - generic:
+      - generic: Lv.78
+      - generic: 炼虚期二层
+    - generic:
+      - generic: Lv.79
+      - generic: 炼虚期二层
+  - generic:
+    - generic: 完成【每日修行】 +12万 修为
+    - generic: 突破 · 炼虚期二层
+    - generic: 完成【每日顿悟】 +15.8万 修为
+    - generic: 自动装备 天品【天罡的赤霄枪·焚天】

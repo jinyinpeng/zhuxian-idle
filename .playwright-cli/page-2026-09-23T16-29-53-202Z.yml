@@ -1,0 +1,59 @@
+- generic [ref=f6e3]:
+  - generic [ref=f6e4]:
+    - generic [ref=f6e97]:
+      - button "角色属性" [ref=f6e98]: "83"
+      - generic [ref=f6e99]:
+        - generic [ref=f6e100]:
+          - text: 血凤鸣
+          - generic [ref=f6e101]: 焚香谷
+        - generic [ref=f6e102]: 炼虚期五层 · 战力 8.02万
+      - generic [ref=f6e103]:
+        - button "统计" [ref=f6e104] [cursor=pointer]
+        - button "设置" [ref=f6e107] [cursor=pointer]
+    - generic [ref=f6e110]:
+      - generic [ref=f6e111]: 219万
+      - generic [ref=f6e114]: "465"
+      - generic [ref=f6e117]: "7838"
+      - button "挂机开关" [ref=f6e120] [cursor=pointer]: 挂机中
+  - generic [ref=f6e31] [cursor=pointer]:
+    - generic:
+      - button "通天峰 Lv.84-104" [ref=f6e123]
+      - generic:
+        - generic: 263万
+        - generic: "430"
+    - generic [ref=f6e40]:
+      - generic [ref=f6e41]:
+        - generic [ref=f6e43]: 4.14万 / 4.14万
+        - generic [ref=f6e49]:
+          - generic [ref=f6e50]: Lv.79
+          - text: 血凤鸣
+      - generic [ref=f6e124]:
+        - generic [ref=f6e125]:
+          - generic [ref=f6e126]: Lv.93
+          - text: 剑气残魂
+        - generic [ref=f6e127]: 0%
+    - generic:
+      - generic: "-1.36万"
+      - generic: +6905 修为 · +1274 金
+    - generic:
+      - generic: 一群妖物围了上来（2 只）
+      - generic: 一群妖物围了上来（2 只）
+      - generic: 施展【万剑归宗】，造成 1.1万 伤害
+      - generic: 一群妖物围了上来（2 只）
+      - generic: 装备【太虚的赤霄枪·诛仙】
+  - generic [ref=f6e58]:
+    - generic [ref=f6e59]:
+      - generic [ref=f6e60]: 激战中 · 剑气残魂
+      - generic [ref=f6e63]: 89.8 只/分
+    - generic [ref=f6e64]: 17.4万 / 38.8万 （44.9%）
+    - generic [ref=f6e67]:
+      - generic [ref=f6e68]: 战力 8.02万
+      - generic [ref=f6e69]: DPS 1.31万
+  - navigation [ref=f6e71]:
+    - button "挂机" [ref=f6e72] [cursor=pointer]
+    - button "行囊 60" [ref=f6e76] [cursor=pointer]:
+      - generic [ref=f6e79]: 行囊
+      - generic [ref=f6e80]: "60"
+    - button "技能" [ref=f6e81] [cursor=pointer]
+    - button "任务" [ref=f6e85] [cursor=pointer]
+    - button "社交" [ref=f6e89] [cursor=pointer]

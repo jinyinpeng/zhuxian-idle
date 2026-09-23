@@ -2466,11 +2466,13 @@ html, body { overscroll-behavior-y: auto; }
    镜像成 +50%，人物就被推出框外（选「女」时人物不在框里正是这么来的）。
    挂到 .avatar / .sc-fig：容器本身没有位移，镜像围绕容器中心进行，
    子元素原有的 translateX(-50%) 照常居中；容器里只有对称的地纹/投影，翻面无副作用。 */
-.unit.hero.gender-female .avatar,
-.sect-chip.gender-female .sc-fig { scale: -1 1; }
-/* 门派专属女版插画本身就是女相，再翻一次会左右颠倒 → 反向抵消回来 */
-.unit.hero.gender-female .avatar img.fig[data-gender='female'],
-.sect-chip.gender-female .sc-fig .fig[data-gender='female'] { scale: -1 1; }
+/* v29：女版镜像只对「矢量兜底立绘」启用 —— 它画的是男相剪影，需要翻面。
+   AI 女版插画本身就是女相，绝不能翻。
+   之前是「容器整体翻 + 对 img 再翻一次抵消」，但容器的镜像会把子元素一起
+   挪到容器左侧（子元素的 left:50% 在镜像坐标系里变成从右往左算），
+   实测人物被推到 left=-33px、半个身子出格 —— 就是「人物偏左」的根因。 */
+.unit.hero.gender-female .avatar:has(svg.fig),
+.sect-chip.gender-female .sc-fig:has(svg.fig) { scale: -1 1; }
 
 /* v19 性别切换（设置面板内） */
 .sex-switch { display: flex; gap: 6px; flex: none; }
