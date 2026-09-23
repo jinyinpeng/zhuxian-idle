@@ -794,6 +794,7 @@
 
   /* 行囊/身上装备的图标：按部位画"实物"小图（金属高光 + 暗面 + 木质/皮革），
      品质色走 currentColor —— 比原来一根线条的图标更像真家伙。 */
+  const ITM_FB = {};      /* 矢量兜底图缓存：key = 部位+品质色，供 onerror 取用 */
   function itemArt(slotId, col) {
     const A = {
       weapon: '<path d="M12 1.6l2.1 4.2V14h-4.2V5.8z" fill="#dfe7ee"/><path d="M12 1.6l2.1 4.2V14H12z" fill="#fff" opacity=".55"/><path d="M7.6 14h8.8v2.1H7.6z" fill="currentColor"/><path d="M11 16.1h2v4.4h-2z" fill="#63492f"/><circle cx="12" cy="21.2" r="1.5" fill="currentColor"/>',
@@ -805,8 +806,21 @@
       ring: '<path d="M12 8.4a6.6 6.6 0 100 13.2 6.6 6.6 0 000-13.2zm0 2.6a4 4 0 110 8 4 4 0 010-8z" fill="currentColor"/><path d="M9.2 2.6h5.6l1.8 5.2H7.4z" fill="#cfe9ff"/><path d="M12 2.6l2.8 5.2H12z" fill="#fff" opacity=".7"/>',
       talisman: '<path d="M6.6 2.6h10.8v14.8l-5.4 4-5.4-4z" fill="#e8dcc0"/><path d="M6.6 2.6h10.8v14.8l-5.4 4z" fill="#c9b995" opacity=".8"/><path d="M9.4 6h5.2M9.4 9h5.2M9.4 12h3.2" stroke="currentColor" stroke-width="1.5"/><circle cx="12" cy="16.6" r="1.8" fill="currentColor"/>'
     };
+    /* 优先用 AI 写实实物图（assets/it_<部位>.png），取不到再回退上面的矢量图。
+       onerror 走 window.UI.__itm，图片 404 时会立刻换成矢量，不会留空图标。 */
+    const src = 'assets/it_' + slotId + '.png';
+    const key = slotId + '|' + (col || '');
+    ITM_FB[key] = itmSvg(A, slotId, col);
+    return '<img class="itm" alt="" draggable="false" src="' +
+      (FIG.ver ? FIG.ver(src) : src) + '" style="color:' + (col || '#9ca3af') + '"' +
+      ' onerror="window.UI.__itm(this,\'' + key + '\')">';
+  }
+  function itmSvg(A, slotId, col) {
     return '<svg class="itm" viewBox="0 0 24 24" aria-hidden="true" style="color:' + (col || '#9ca3af') + '">' +
       (A[slotId] || A.weapon) + '</svg>';
+  }
+  function __itm(el, key) {
+    if (el && el.parentNode) el.outerHTML = ITM_FB[key] || '';
   }
 
   function slotIcon(slotId) {
@@ -1548,7 +1562,7 @@
   global.UI = {
     init, openSheet, closeSheet, openModal, closeModal, openRegion,
     openSettings, openOffline, openStats, openLevelTip, openCharPanel,
-    renderSheet, renderTop, softRefresh, maxSkillLv, esc
+    renderSheet, renderTop, softRefresh, maxSkillLv, esc, __itm
   };
   G.__maxSkillLv = maxSkillLv;
 })(window);

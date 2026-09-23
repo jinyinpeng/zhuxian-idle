@@ -658,7 +658,7 @@
 
   global.FIGURE = {
     hero: hero, monster: monster, heroSvg: heroSvg, monsterSvg: monsterSvg,
-    __fail: __fail, probe: probe,
+    __fail: __fail, probe: probe, ver: ver,
     isBad: function (src) { return !!IMG_BAD[src]; },
     HERO_IMG: HERO_IMG, MOB_IMG: MOB_IMG, HERO_IMG_F: HERO_IMG_F,
     HERO_IMG_FALLBACK: HERO_IMG_FALLBACK, SECT_LOOK: SECT_LOOK, MOB_LOOK: MOB_LOOK
