@@ -31,6 +31,18 @@
   const KEYS = ['lean', 'rot', 'yaw', 'x', 'y', 'sy', 'sx', 'skew'];
 
   function lerp(a, b, t) { return a + (b - a) * t; }
+  /* 技能动作风格表：一套曲线上按技能类型缩放幅度与节奏 ——
+     http:// 一次写成四段：蓄力(windup) → 发劲(cast) → 送出(release) → 收势(recover)。
+     dash=前冲量、rise=上浮量、spin=体轴扭转、power=整体幅度、dur=总时长(秒)。
+     近战往前压、远程/范围往上浮并转体、绝技两者都拉满 —— 这样同一条曲线能演五种气质。 */
+  const STYLES = {
+    melee:  { dash: 1.15, rise: 0.55, spin: 1.0, power: 1.15, dur: 0.50 },
+    ranged: { dash: 0.15, rise: 1.00, spin: 0.7, power: 0.95, dur: 0.68 },
+    aoe:    { dash: 0.00, rise: 1.35, spin: 1.3, power: 1.10, dur: 0.86 },
+    buff:   { dash: 0.00, rise: 1.15, spin: 0.5, power: 0.85, dur: 0.72 },
+    ult:    { dash: 0.60, rise: 2.20, spin: 2.4, power: 1.50, dur: 1.30 }
+  };
+
   function easeOut(t) { return 1 - (1 - t) * (1 - t); }
   function easeInOut(t) { return t < 0.5 ? 2 * t * t : 1 - 2 * (1 - t) * (1 - t); }
 
@@ -80,10 +92,20 @@
     let mode = 'idle', lastMode = 'idle', modeT = 0, trans = 1;
     let t = Math.random() * 6;          /* 相位错开，多只单位不同步呼吸 */
     let gait = 0;
+    let style = 'melee', releaseCb = null, releaseFired = false;
+    function st() { return STYLES[style] || STYLES.melee; }
+    /* 「送出」那一瞬：特效与动作同拍 —— 关键帧只报一次 */
+    function fireRelease(p, at) {
+      if (releaseFired || p < at) return;
+      releaseFired = true;
+      if (releaseCb) { try { releaseCb(); } catch (e) { } }
+    }
 
     function setMode(m) {
       if (m === mode) return;
       lastMode = mode; mode = m; modeT = 0; trans = 0;
+      releaseFired = false;              /* 新动作重新计关键帧 */
+      if (m !== 'attack' && m !== 'cast') style = 'melee';
     }
 
     function update(dt) {
@@ -123,27 +145,38 @@
 
       /* —— 挥击：后撤蓄力 → 前压送出 → 收势 —— */
       if (mode === 'attack') {
-        const p = Math.min(1, modeT / 0.46);
-        if (p < 0.3) { const k = easeOut(p / 0.3); pose.x -= 4 * k; pose.lean -= 4 * k; pose.yaw -= 7 * k; }
-        else if (p < 0.58) {
+        const S = st(), kp = S.power, kd = S.dash;
+        const p = Math.min(1, modeT / S.dur);
+        if (p < 0.3) {                       /* ① 蓄力：后撤、沉肩、体轴反拧 */
+          const k = easeOut(p / 0.3) * kp;
+          pose.x -= 4 * k * kd; pose.lean -= 4 * k; pose.yaw -= 7 * k;
+        } else if (p < 0.58) {               /* ② 发劲 → ③ 送出：前压刺出，重心的冲量最大 */
           const k = easeOut((p - 0.3) / 0.28);
-          pose.x += lerp(-4, 7, k); pose.lean += lerp(-4, 7, k);
-          pose.yaw += lerp(-7, 9, k); pose.y -= 2.2 * sin(k * PI);
-        } else {
+          pose.x += lerp(-4 * kp * kd, 7 * kp * kd, k);
+          pose.lean += lerp(-4 * kp, 7 * kp, k);
+          pose.yaw += lerp(-7 * kp, 9 * kp, k);
+          pose.y -= 2.2 * kp * sin(k * PI);
+          fireRelease(p, 0.5);
+        } else {                             /* ④ 收势：卸力回位 */
           const k = easeInOut((p - 0.58) / 0.42);
-          pose.x += lerp(7, 0, k); pose.lean += lerp(7, 0, k); pose.yaw += lerp(9, 0, k);
+          pose.x += lerp(7 * kp * kd, 0, k);
+          pose.lean += lerp(7 * kp, 0, k);
+          pose.yaw += lerp(9 * kp, 0, k);
         }
         if (p >= 1) setMode('idle');
       }
 
       /* —— 施法：上浮、后仰、体轴微转 —— */
       if (mode === 'cast') {
-        const p = Math.min(1, modeT / 0.66);
+        const S = st(), kp = S.power;
+        const p = Math.min(1, modeT / S.dur);
+        /* ① 蓄力上浮（起手）→ ② 掐诀保持（发劲）→ ④ 收势回落 */
         const c = p < 0.4 ? easeOut(p / 0.4) : (p < 0.72 ? 1 : 1 - easeInOut((p - 0.72) / 0.28));
-        pose.y -= 4.5 * c;
-        pose.lean -= 3.5 * c;
-        pose.sy *= 1 + 0.016 * c;
-        pose.yaw += 6 * sin(p * PI);
+        pose.y -= 4.5 * c * S.rise * (kp / 1.15);
+        pose.lean -= 3.5 * c * kp;
+        pose.sy *= 1 + 0.016 * c * S.rise;
+        pose.yaw += 6 * sin(p * PI) * S.spin;
+        fireRelease(p, 0.62);
         if (p >= 1) setMode('idle');
       }
 
@@ -193,6 +226,15 @@
     return {
       setMode: setMode,
       update: update,
+      /* 技能动作系统接口：设风格、挂「送出」回调、查关键帧状态 */
+      setStyle: function (s, mode2) {
+        if (STYLES[s]) style = s;
+        if (mode2) { setMode('idle'); setMode(mode2); }
+      },
+      onRelease: function (cb) { releaseCb = cb; releaseFired = false; },
+      clearRelease: function () { releaseCb = null; releaseFired = false; },
+      get style() { return style; },
+      get released() { return releaseFired; },
       get mode() { return mode; },
       destroy: function () {
         /* 类挂在「单位」节点上，卸载时两个都要清掉，否则残留的 .fig-motion
@@ -205,5 +247,5 @@
     };
   }
 
-  global.FigureMotion = { mount: mount, POSES: POSES };
+  global.FigureMotion = { mount: mount, POSES: POSES, STYLES: STYLES };
 })(window);

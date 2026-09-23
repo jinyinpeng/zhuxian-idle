@@ -377,8 +377,17 @@
       mobFigs.push(m && m.node ? mountFigMotion(m.node) : null);
     });
   }
-  function setFigPose(mode) {
-    if (heroFig) heroFig.setMode(mode);
+  /* 立绘动作：可选传入技能风格（melee/ranged/aoe/buff/ult）。
+     带风格时会「先归位再进入」，让同类型技能连发也能完整重播一遍动作，
+     否则 setMode 的同模式早退会让第二次施法看起来没动。 */
+  function setFigPose(mode, style) {
+    if (!heroFig) return;
+    if (style && heroFig.setStyle) heroFig.setStyle(style, mode);
+    else heroFig.setMode(mode);
+  }
+  /* 打断：作废尚未触发的「送出」特效（受击/倒地时用） */
+  function figCancel() {
+    if (heroFig && heroFig.clearRelease) heroFig.clearRelease();
   }
   function setMobFigPose(idx, mode) {
     const f = mobFigs[idx || 0];
@@ -1016,7 +1025,7 @@
       setTimeout(() => ui.hero && ui.hero.classList.remove('act'), 360);
       swordFly(e && e.idx);
       setHeroPose('attack');          /* v22：挥击骨骼动作 */
-      setFigPose('attack');           /* v23：立绘挥击（前压送出） */
+      setFigPose('attack', 'melee');  /* v23：立绘挥击（近战风格：前压送出） */
     });
     /* v2 修复：原先怪物攻击时做动作的是主角（看起来像主角自己往前冲）。
        现在：怪物向左扑击，主角同时做出受击踉跄。 */
@@ -1073,20 +1082,28 @@
         impactRingAt('hero', '#f87171', false);
         if (d.crit) shakeStage(2);
         setHeroPose('hurt');         /* v22：受击后仰（骨骼） */
+        figCancel();                 /* 被打断：未触发的施法特效作废 */
         setFigPose('hurt');          /* v23：立绘受击（后仰踉跄） */
       }
     });
 
     G.on('skill', s => {
       const color = (G.sectOf(G.state.sect) || {}).color || '#facc15';
-      castFx('hero', s.name, color);
+      /* 技能类型 → 动作风格：单体走远程御物、多段走范围法术、增益自成一格、绝技最张扬 */
+      const STYLE = { single: 'ranged', aoe: 'aoe', buff: 'buff', ult: 'ult' }[(s && s.type) || 'single'] || 'ranged';
       burst('hero', color, 14);
-      /* v6：群攻 —— 每个被命中的目标身上给出门派专属特效 */
-      skillBurst(G.state.sect, (G.combat && G.combat.mobs) || []);
-      /* v15：施法表现（姿态 + 手心法球 + 多层法阵 + 灵光 + 微闪） */
-      castPose(color);
+      /* 动作与特效同拍：法阵/法球/群攻特效都等到「送出」那一瞬再出，
+         而不是事件一到就砸出来 —— 先蓄力、后爆发的观感差别全在这里。 */
+      const fx = function () {
+        castFx('hero', s.name, color);
+        skillBurst(G.state.sect, (G.combat && G.combat.mobs) || []);
+        castPose(color);
+      };
+      figCancel();                    /* 上一段没来得及触发的特效作废 */
+      if (heroFig && heroFig.onRelease) heroFig.onRelease(fx);
+      else fx();
       setHeroPose('cast');            /* v22：抬臂掐诀的骨骼动作 */
-      setFigPose('cast');             /* v23：立绘施法（上浮后仰） */
+      setFigPose('cast', STYLE);      /* v23：按技能类型演不同的施法动作 */
     });
 
     G.on('exp', e => {
@@ -1136,6 +1153,7 @@
     });
 
     G.on('death', () => {
+      figCancel();                     /* 倒地：施法被打断 */
       toast('力竭倒地，正在调息…', 'bad');
       if (ui.hero) {
         ui.hero.classList.remove('act');
