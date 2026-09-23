@@ -256,7 +256,7 @@
     D.SHOP.forEach(sp => {
       const q = D.QUALITIES[sp.quality];
       const slot = sp.slot ? D.SLOTS.find(x => x.id === sp.slot) : null;
-      const can = s.res.yuanbao >= sp.price;
+      const can = s.res.yuanbao >= sp.price && s.bag.length < 60;
       b += '<div class="shop-card" style="border-color:' + hexA(q.color, .45) + '">' +
         '<div class="shop-top">' +
           '<span class="shop-q" style="color:' + q.color + '">' + q.name + '</span>' +
@@ -271,7 +271,8 @@
           ic('gem', 'ic-xs') + ' 花 ' + sp.price + ' 钻石购买</button>' +
         '</div>';
     });
-    b += '<div class="sheet-note">钻石来自任务奖励与寻宝回馈；买到手即刻入行囊。</div>';
+    b += '<div class="sheet-note">钻石来自任务奖励与寻宝回馈；买到手即刻入行囊' +
+      (s.bag.length >= 60 ? '。<b style="color:#fca5a5">当前行囊已满（60/60），先出售或装备腾出空位</b>' : '') + '。</div>';
     return b;
   }
 
@@ -1273,7 +1274,7 @@
       const it = s.equipped[sl.id];
       if (!it) {
         return '<div class="cp-eq empty">' +
-          '<div class="cp-eq-ic">' + ic(sl.icon) + '</div>' +
+          '<div class="cp-eq-ic">' + itemArt(sl.id, '#57534e') + '</div>' +
           '<div class="cp-eq-main">' +
             '<div class="cp-eq-name">未着装备</div>' +
             '<div class="cp-eq-stat">' + sl.name + '</div>' +
@@ -1286,7 +1287,7 @@
       }).join(' · ');
       total += G.itemPower(it); cnt++;
       return '<div class="cp-eq">' +
-        '<div class="cp-eq-ic" style="color:' + q.color + '">' + ic(sl.icon) +
+        '<div class="cp-eq-ic" style="color:' + q.color + '">' + itemArt(sl.id, q.color) +
           (it.enh > 0 ? '<span class="cp-enh">+' + it.enh + '</span>' : '') + '</div>' +
         '<div class="cp-eq-main">' +
           '<div class="cp-eq-name" style="color:' + q.color + '">' + esc(it.name) + '</div>' +

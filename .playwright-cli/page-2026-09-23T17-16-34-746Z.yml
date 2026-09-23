@@ -1,0 +1,127 @@
+- generic [ref=f14e2]:
+  - generic [ref=f14e3]:
+    - generic [ref=f14e4]:
+      - generic [ref=f14e5]:
+        - button "角色属性" [ref=f14e6]: "114"
+        - generic [ref=f14e7]:
+          - generic [ref=f14e8]:
+            - text: 血凤鸣
+            - generic [ref=f14e9]: 焚香谷
+          - generic [ref=f14e10]: 大乘期五层 · 战力 13.5万
+        - generic [ref=f14e11]:
+          - button "统计" [ref=f14e12] [cursor=pointer]
+          - button "设置" [ref=f14e15] [cursor=pointer]
+      - generic [ref=f14e18]:
+        - generic [ref=f14e19]: 522万
+        - generic [ref=f14e22]: "495"
+        - generic [ref=f14e25]: "9395"
+        - button "挂机开关" [ref=f14e28] [cursor=pointer]: 挂机中
+    - generic [ref=f14e31] [cursor=pointer]:
+      - generic:
+        - button "诛仙剑阵 Lv.104-165" [ref=f14e35]
+        - generic:
+          - generic: 58万
+          - generic: "492"
+      - generic [ref=f14e40]:
+        - generic [ref=f14e41]:
+          - generic [ref=f14e43]: 7.25万 / 7.25万
+          - generic [ref=f14e49]:
+            - generic [ref=f14e50]: Lv.114
+            - text: 血凤鸣
+        - generic [ref=f14e51]:
+          - generic [ref=f14e52]:
+            - generic [ref=f14e53]:
+              - generic [ref=f14e56]: Lv.150
+              - text: 诛仙剑主
+            - generic [ref=f14e57]: 0%
+          - generic [ref=f14e60]:
+            - generic [ref=f14e61]:
+              - generic [ref=f14e62]: Lv.118
+              - text: 剑阵凶灵
+            - generic [ref=f14e63]: 0%
+          - generic [ref=f14e66]:
+            - generic [ref=f14e67]:
+              - generic [ref=f14e68]: Lv.110
+              - text: 诛仙剑魄
+            - generic [ref=f14e69]: 0%
+      - generic:
+        - generic: 诛仙剑诀
+        - generic: 太极玄清
+        - generic: 万剑归宗
+        - generic: 破剑式
+      - generic:
+        - generic: "-21.8万"
+        - generic: "-22.8万"
+        - generic: "-23.1万"
+        - generic: +1.21万
+        - generic: +6587 修为 · +1862 金
+        - generic: +5745 修为 · +1665 金
+        - generic: +6587 修为 · +1862 金
+        - generic: +5745 修为 · +1665 金
+        - generic: "-1.84万"
+        - generic: "-1.84万"
+        - generic: "-1.84万"
+        - generic: +6587 修为 · +1862 金
+        - generic: +5745 修为 · +1665 金
+        - generic: "-12万"
+        - generic: +10.5万 修为 · +1.37万 金
+        - generic: +6587 修为 · +1862 金
+        - generic: +5745 修为 · +1665 金
+      - generic:
+        - generic: 施展【太极玄清】，攻势大涨
+        - generic: 施展【万剑归宗】，造成 5.52万 伤害
+        - generic: 施展【破剑式】，造成 12万 伤害
+        - generic: 装备【天罡的星辰链·太虚】
+        - generic: 击杀妖将【诛仙剑主】，获得 10.5万 修为
+    - generic [ref=f14e72]:
+      - generic [ref=f14e73]:
+        - generic [ref=f14e74]: 寻找妖物…
+        - generic [ref=f14e77]: 112.3 只/分
+      - generic [ref=f14e78]: 62.1万 / 71.9万 （86.5%）
+      - generic [ref=f14e81]:
+        - generic [ref=f14e82]: 战力 13.6万
+        - generic [ref=f14e83]: DPS 2.94万
+    - navigation [ref=f14e85]:
+      - button "挂机" [ref=f14e86] [cursor=pointer]
+      - button "行囊 60" [ref=f14e90] [cursor=pointer]:
+        - generic [ref=f14e93]: 行囊
+        - generic [ref=f14e94]: "60"
+      - button "技能" [ref=f14e95] [cursor=pointer]
+      - button "任务" [ref=f14e99] [cursor=pointer]
+      - button "社交" [ref=f14e103] [cursor=pointer]
+    - generic:
+      - generic: Lv.113
+      - generic: 大乘期五层
+    - generic:
+      - generic: Lv.114
+      - generic: 大乘期五层
+  - generic [ref=f14e112]:
+    - generic [ref=f14e113]:
+      - generic [ref=f14e114]: 离线收益
+      - generic [ref=f14e115]: 通天峰 · 自动挂机结算
+    - generic [ref=f14e116]:
+      - generic [ref=f14e117]: 闭关修炼 45分28秒
+      - generic [ref=f14e118]:
+        - generic [ref=f14e119]:
+          - generic [ref=f14e120]: "1546"
+          - generic [ref=f14e121]: 斩杀妖物
+        - generic [ref=f14e122]:
+          - generic [ref=f14e123]: 1531万
+          - generic [ref=f14e124]: 修为
+        - generic [ref=f14e125]:
+          - generic [ref=f14e126]: 28万
+          - generic [ref=f14e127]: 金币
+        - generic [ref=f14e128]:
+          - generic [ref=f14e129]: "989"
+          - generic [ref=f14e130]: 强化石
+      - generic [ref=f14e131]: 拾取装备 25 件：
+      - generic [ref=f14e135]:
+        - generic [ref=f14e136]: 太虚的束云带·诛仙
+        - generic [ref=f14e137]: 仙品 · Lv.97 · 最佳收获
+      - generic [ref=f14e138]: 其余装备已放入行囊（部分低品质已自动折算为金币）
+    - button "收入囊中" [ref=f14e140] [cursor=pointer]
+  - generic:
+    - generic: 突破 · 大乘期五层
+    - generic: 完成【问剑长生】 +91.9万 修为
+    - generic: 突破 · 大乘期五层
+    - generic: 自动装备 天品【天罡的星辰链·太虚】
