@@ -1,0 +1,48 @@
+- generic [ref=f17e3]:
+  - generic [ref=f17e4]:
+    - generic [ref=f17e5]:
+      - button "角色属性" [ref=f17e6]: "202"
+      - generic [ref=f17e7]:
+        - generic [ref=f17e8]:
+          - text: 青剑
+          - generic [ref=f17e9]: 鬼王宗
+        - generic [ref=f17e10]: 仙帝四层 · 战力 41.7万
+      - generic [ref=f17e11]:
+        - button "统计" [ref=f17e12] [cursor=pointer]
+        - button "设置" [ref=f17e15] [cursor=pointer]
+    - generic [ref=f17e18]:
+      - generic [ref=f17e19]: 2932万
+      - generic [ref=f17e22]: "5000"
+      - generic [ref=f17e25]: 2.83万
+      - button "挂机开关" [ref=f17e28] [cursor=pointer]: 挂机中
+  - generic [ref=f17e31] [cursor=pointer]:
+    - generic:
+      - button "诛仙剑阵 Lv.104-165" [ref=f17e35]
+      - generic:
+        - generic: "--"
+        - generic: "0"
+    - generic [ref=f17e41]:
+      - generic [ref=f17e43]: 17.5万 / 17.5万
+      - generic [ref=f17e49]:
+        - generic [ref=f17e50]: Lv.202
+        - text: 青剑
+    - generic:
+      - generic: 施展【太极玄清】，攻势大涨
+      - generic: 施展【万剑归宗】，造成 7.27万 伤害
+      - generic: 一群妖物围了上来（2 只）
+      - generic: 施展【破剑式】，造成 92.2万 伤害
+      - generic: 施展【御剑术】，造成 27.3万 伤害
+  - generic [ref=f17e51]:
+    - generic [ref=f17e52]:
+      - generic [ref=f17e53]: 自动寻怪中
+      - generic [ref=f17e56]: 0.0 只/分
+    - generic [ref=f17e57]: 63.9万 / 219万 （29.2%）
+    - generic [ref=f17e60]:
+      - generic [ref=f17e61]: 战力 0
+      - generic [ref=f17e62]: DPS 0
+  - navigation [ref=f17e64]:
+    - button "挂机" [ref=f17e65] [cursor=pointer]
+    - button "行囊" [ref=f17e69] [cursor=pointer]
+    - button "技能" [ref=f17e73] [cursor=pointer]
+    - button "任务" [ref=f17e77] [cursor=pointer]
+    - button "社交" [ref=f17e81] [cursor=pointer]

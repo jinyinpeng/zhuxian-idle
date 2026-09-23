@@ -1,0 +1,55 @@
+- generic [ref=f18e2]:
+  - generic [ref=f18e3]:
+    - generic [ref=f18e4]:
+      - generic [ref=f18e5]:
+        - button "角色属性" [ref=f18e6]: "124"
+        - generic [ref=f18e7]:
+          - generic [ref=f18e8]:
+            - text: 血凤鸣
+            - generic [ref=f18e9]: 焚香谷
+          - generic [ref=f18e10]: 渡劫期二层 · 战力 17.1万
+        - generic [ref=f18e11]:
+          - button "统计" [ref=f18e12] [cursor=pointer]
+          - button "设置" [ref=f18e15] [cursor=pointer]
+      - generic [ref=f18e18]:
+        - generic [ref=f18e19]: 573万
+        - generic [ref=f18e22]: "569"
+        - generic [ref=f18e25]: 1.03万
+        - button "挂机开关" [ref=f18e28] [cursor=pointer]: 挂机中
+    - generic [ref=f18e31] [cursor=pointer]:
+      - generic:
+        - button "诛仙剑阵 Lv.104-165" [ref=f18e35]
+        - generic:
+          - generic: 722万
+          - generic: "609"
+      - generic [ref=f18e41]:
+        - generic [ref=f18e43]: 8.2万 / 8.2万
+        - generic [ref=f18e49]:
+          - generic [ref=f18e50]: Lv.124
+          - text: 血凤鸣
+      - generic:
+        - generic: 【混沌的疾风履·九霄】已强化至 +9
+        - generic: 一群妖物围了上来（2 只）
+        - generic: 一群妖物围了上来（2 只）
+        - generic: 修为精进，突破至 渡劫期二层（Lv.124）
+        - generic: 行囊已满，多余掉落自动折算金币
+    - generic [ref=f18e51]:
+      - generic [ref=f18e52]:
+        - generic [ref=f18e53]: 寻找妖物…
+        - generic [ref=f18e56]: 67.4 只/分
+      - generic [ref=f18e57]: 14.3万 / 84.7万 （16.9%）
+      - generic [ref=f18e60]:
+        - generic [ref=f18e61]: 战力 17.1万
+        - generic [ref=f18e62]: DPS 6.96万
+    - navigation [ref=f18e64]:
+      - button "挂机" [ref=f18e65] [cursor=pointer]
+      - button "行囊 60" [ref=f18e69] [cursor=pointer]:
+        - generic [ref=f18e72]: 行囊
+        - generic [ref=f18e73]: "60"
+      - button "技能" [ref=f18e74] [cursor=pointer]
+      - button "任务" [ref=f18e78] [cursor=pointer]
+      - button "社交" [ref=f18e82] [cursor=pointer]
+    - generic:
+      - generic: Lv.124
+      - generic: 渡劫期二层
+  - generic: 突破 · 渡劫期二层
