@@ -489,9 +489,9 @@
      文件缺失时由 imgFig 的 onerror 自动回退到 mob-art.js 的矢量立绘 ✓ */
   var MOB_IMG = {
     beast: 'assets/mob_beast_art.png',
-    /* 鬼物：半透明幽蓝主体，与背景同色系，绿幕/黑底/实体版三版都抠不净，
-       暂留空走矢量兜底（避免每次加载 404）；图一出好就加回这里。 */
-    /* ghost: 'assets/mob_ghost_art.png', */
+    /* 鬼物：最终改用「骷髅鬼卒」—— 实色骨架 + 破烂斗篷，绿幕抠图干净；
+       之前的半透明幽蓝幽灵与背景同色系，三版都抠不净，是设定与抠图天然冲突。 */
+    ghost: 'assets/mob_ghost_art.png',
     demon: 'assets/mob_demon_art.png',
     human: 'assets/mob_human_art.png',
     /* 妖将：AI 图是「胯部以上」的半身立绘，配合精英位放大显示反而更有压迫感 ✓ */

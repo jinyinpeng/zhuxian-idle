@@ -939,6 +939,10 @@
             '<button class="btn gold sm" style="flex:1" data-ac="register">注册并上传</button>' +
             '<button class="btn sm" style="flex:1" data-ac="login">登录并恢复</button>' +
           '</div>' +
+          '<div style="display:flex;gap:8px">' +
+            '<button class="btn sm" style="flex:1" data-code="export">导出存档码</button>' +
+            '<button class="btn sm" style="flex:1" data-code="import">导入存档码</button>' +
+          '</div>' +
           '<div class="ac-tip" id="ac-state">未登录 · 进度只存在本机</div>' +
         '</div>' +
         '<div class="section-title" style="margin-top:16px">角色</div>' +
@@ -1055,6 +1059,30 @@
           }
           try { global.localStorage.setItem('lx_acct_phone', phone); } catch (e) { }
         } catch (e) { say('失败：' + (e && e.message ? e.message : e)); }
+      });
+    });
+
+    /* v25：存档码 —— 不依赖云端的跨设备备份/恢复（手机号 + 口令加密） */
+    el.modal.querySelectorAll('[data-code]').forEach(n => {
+      n.addEventListener('click', async () => {
+        const phone = (el.modal.querySelector('#ac-phone').value || '').trim();
+        const pwd = el.modal.querySelector('#ac-pwd').value || '';
+        const mode = n.getAttribute('data-code');
+        try {
+          if (mode === 'export') {
+            const code = await global.Account.exportCode(G.state, phone, pwd);
+            try { global.navigator.clipboard.writeText(code); } catch (e) { }
+            global.prompt('存档码（已复制到剪贴板，请妥善保存）：', code);
+          } else {
+            const code = global.prompt('把存档码粘贴到这里（手机号与口令沿用上面的输入）：');
+            if (!code) return;
+            const snap = await global.Account.importCode(code, phone, pwd);
+            Object.assign(G.state, snap);
+            G.save();
+            R.toast('存档已恢复，正在重载…');
+            setTimeout(() => global.location.reload(), 800);
+          }
+        } catch (e) { R.toast(e && e.message ? e.message : '操作失败'); }
       });
     });
 

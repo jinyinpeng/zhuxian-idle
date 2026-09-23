@@ -61,18 +61,24 @@
       return cbApp;
     } catch (e) { cbApp = null; return null; }
   }
+  /* 读写统一走云函数 zxsvc（服务端管理员权限，不受集合 ACL 限制；服务端只见密文） */
+  async function cbCall(action, id, blob) {
+    if (!cbApp) throw new Error('云端未就绪');
+    const data = { action: action, id: id };
+    if (blob !== undefined) data.blob = blob;
+    const r = await cbApp.callFunction({ name: 'zxsvc', data: data });
+    const res = (r && r.result) || null;
+    if (!res || !res.ok) throw new Error('云存档服务错误：' + ((res && res.msg) || '无法连接'));
+    return res;
+  }
   async function cbPut(id, blob) {
-    if (!cbDb) throw new Error('云数据库未就绪');
-    await cbDb.collection('player_saves').doc(id).set({ blob: JSON.stringify(blob), updated_at: Date.now() });
+    await cbCall('save', id, JSON.stringify(blob));
     return true;
   }
   async function cbGet(id) {
-    if (!cbDb) throw new Error('云数据库未就绪');
-    const r = await cbDb.collection('player_saves').doc(id).get();
-    const d = r && r.data;
-    const row = Array.isArray(d) ? d[0] : (d && d.blob ? d : null);   /* 兼容两种返回结构 */
-    if (!row || !row.blob) return null;
-    return typeof row.blob === 'string' ? JSON.parse(row.blob) : row.blob;
+    const res = await cbCall('load', id);
+    if (!res.blob) return null;
+    return JSON.parse(res.blob);
   }
   async function ready() {
     if (cbTry) return !!cbDb;
@@ -103,7 +109,7 @@
   let K = null, TOKEN = null, UID = null, PHONE = null;
 
   /* 账号 id = 手机号哈希（云端不存明文手机号）；密钥 = 密码派生（从不上传，零知识） */
-  async function acctId(phone) { return 'p_' + await sha256(String(phone).trim() + '|' + SALT); }
+  async function acctId(phone) { return 'game_p_' + await sha256(String(phone).trim() + '|' + SALT); }
 
   async function push(snapshot) {
     if (!K || !PHONE) throw new Error('未登录');
@@ -148,7 +154,27 @@
   function who() { if (PHONE) return PHONE; const s = ses(); return (s && s.phone) || null; }
   function synced() { return !!(K && PHONE); }
 
+  /* 存档码：把进度用「手机号 + 口令」派生密钥加密成一段文本，
+     可在任意设备导入 —— 不依赖云端，换手机/清缓存也能救回进度。 */
+  async function exportCode(snapshot, phone, pwd) {
+    if (!checkPhone(phone)) throw new Error('手机号格式不正确');
+    if (String(pwd || '').length < 6) throw new Error('口令至少 6 位');
+    const key = await deriveKey(String(phone).trim(), pwd, SALT);
+    const box = await encrypt(JSON.stringify(snapshot), key);
+    const raw = JSON.stringify({ p: String(phone).trim(), iv: box.iv, ct: box.ct });
+    return 'ZX1' + b64(enc.encode(raw));
+  }
+  async function importCode(code, phone, pwd) {
+    const s = String(code || '').trim().replace(/\s+/g, '');
+    if (s.slice(0, 3) !== 'ZX1') throw new Error('存档码格式不对（应以 ZX1 开头）');
+    let obj = null;
+    try { obj = JSON.parse(new TextDecoder().decode(unb64(s.slice(3)))); } catch (e) { throw new Error('存档码已损坏'); }
+    const key = await deriveKey(String(phone || obj.p).trim(), pwd, SALT);
+    try { return JSON.parse(await decrypt({ iv: obj.iv, ct: obj.ct }, key)); }
+    catch (e) { throw new Error('口令不正确'); }
+  }
+
   global.AccountCrypto = { sha256, deriveKey, encrypt, decrypt, checkPhone, SALT };
   global.Cloud = { cfg, setCfg, ses, setSes, ready, req, signUp, signIn, mail, cbInit, cbGet, cbPut, uid: () => cbUid };
-  global.Account = { register, login, logout, push, pull, who, synced, ready, acctId };
+  global.Account = { register, login, logout, push, pull, who, synced, ready, acctId, exportCode, importCode };
 })(window);

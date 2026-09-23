@@ -1,0 +1,50 @@
+- generic [ref=f20e3]:
+  - generic [ref=f20e4]:
+    - generic [ref=f20e5]:
+      - button "角色属性" [ref=f20e6]: "156"
+      - generic [ref=f20e7]:
+        - generic [ref=f20e8]:
+          - text: 血凤鸣
+          - generic [ref=f20e9]: 焚香谷
+        - generic [ref=f20e10]: 真仙四层 · 战力 24.6万
+      - generic [ref=f20e11]:
+        - button "统计" [ref=f20e12] [cursor=pointer]
+        - button "设置" [ref=f20e15] [cursor=pointer]
+    - generic [ref=f20e18]:
+      - generic [ref=f20e19]: 929万
+      - generic [ref=f20e22]: "846"
+      - generic [ref=f20e25]: 1.73万
+      - button "挂机开关" [ref=f20e28] [cursor=pointer]: 挂机中
+  - generic [ref=f20e31] [cursor=pointer]:
+    - generic:
+      - button "诛仙剑阵 Lv.104-165" [ref=f20e35]
+      - generic:
+        - generic: "--"
+        - generic: "0"
+    - generic [ref=f20e41]:
+      - generic [ref=f20e43]: 11.1万 / 11.1万
+      - generic [ref=f20e49]:
+        - generic [ref=f20e50]: Lv.156
+        - text: 血凤鸣
+    - generic:
+      - generic: ★ 妖将现身：诛仙剑主（Lv.150），率 2 名手下
+      - generic: 施展【万剑归宗】，造成 18.8万 伤害
+      - generic: 一群妖物围了上来（2 只）
+      - generic: 施展【诛仙剑诀】，造成 91万 伤害
+      - generic: 行囊已满，多余掉落自动折算金币
+  - generic [ref=f20e51]:
+    - generic [ref=f20e52]:
+      - generic [ref=f20e53]: 自动寻怪中
+      - generic [ref=f20e56]: 0.0 只/分
+    - generic [ref=f20e57]: 27万 / 132万 （20.4%）
+    - generic [ref=f20e60]:
+      - generic [ref=f20e61]: 战力 0
+      - generic [ref=f20e62]: DPS 0
+  - navigation [ref=f20e64]:
+    - button "挂机" [ref=f20e65] [cursor=pointer]
+    - button "行囊 60" [ref=f20e69] [cursor=pointer]:
+      - generic [ref=f20e72]: 行囊
+      - generic [ref=f20e73]: "60"
+    - button "技能" [ref=f20e74] [cursor=pointer]
+    - button "任务" [ref=f20e78] [cursor=pointer]
+    - button "社交" [ref=f20e82] [cursor=pointer]
