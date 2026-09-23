@@ -289,7 +289,7 @@
         const on = it && UI.bagSel === it.uid ? ' on' : '';
         return '<div class="eq-slot' + (it ? ' has' : '') + on + '" data-act="sel" data-uid="' + (it ? it.uid : '') + '" data-empty-slot="' + sl.id + '"' +
           (it ? ' style="color:' + q.color + '"' : ' style="color:#57534e"') + '>' +
-          (it ? '<span class="q-mark"></span><span class="enh">+' + it.enh + '</span>' + ic(sl.icon) : '<span style="opacity:.35">' + ic(sl.icon) + '</span>') +
+          (it ? '<span class="q-mark"></span><span class="enh">+' + it.enh + '</span>' + itemArt(sl.id, q.color) : '<span style="opacity:.35">' + itemArt(sl.id, '#57534e') + '</span>') +
           '<span class="slot-lab">' + sl.name + '</span>' +
           '</div>';
       }).join('') + '</div>';
@@ -308,7 +308,7 @@
             '<span class="cg"></span>' +
             (it.isNew ? '<span class="new"></span>' : '') +
             (it.enh > 0 ? '<span class="enh">+' + it.enh + '</span>' : '') +
-            ic(sl ? sl.icon : 'package') +
+            itemArt(sl ? sl.id : 'weapon', q.color) +
             '</div>';
         }).join('') + '</div>';
       }
@@ -347,7 +347,7 @@
 
     let html = '<div class="item-card" style="border-color:' + hexA(q.color, .4) + '">';
     html += '<div class="ic-head">' +
-      '<div class="ic-icon" style="color:' + q.color + '">' + ic(sl ? sl.icon : 'package') + '</div>' +
+      '<div class="ic-icon" style="color:' + q.color + '">' + itemArt(sl ? sl.id : 'weapon', q.color) + '</div>' +
       '<div style="flex:1;min-width:0">' +
         '<div class="ic-name" style="color:' + q.color + '">' + esc(it.name) + (it.enh ? ' <span style="color:#facc15">+' + it.enh + '</span>' : '') + '</div>' +
         '<div class="ic-sub">' + q.name + ' · ' + (sl ? sl.name : '') + ' · 等阶 Lv.' + it.ilvl + '</div>' +
@@ -789,6 +789,23 @@
         break;
       }
     }
+  }
+
+  /* 行囊/身上装备的图标：按部位画"实物"小图（金属高光 + 暗面 + 木质/皮革），
+     品质色走 currentColor —— 比原来一根线条的图标更像真家伙。 */
+  function itemArt(slotId, col) {
+    const A = {
+      weapon: '<path d="M12 1.6l2.1 4.2V14h-4.2V5.8z" fill="#dfe7ee"/><path d="M12 1.6l2.1 4.2V14H12z" fill="#fff" opacity=".55"/><path d="M7.6 14h8.8v2.1H7.6z" fill="currentColor"/><path d="M11 16.1h2v4.4h-2z" fill="#63492f"/><circle cx="12" cy="21.2" r="1.5" fill="currentColor"/>',
+      head: '<path d="M3.6 16.5l2.6-8h11.6l2.6 8z" fill="currentColor"/><path d="M6.2 8.5h11.6l1 3H5.2z" fill="#fff" opacity=".28"/><path d="M3.6 16.5h16.8v2.6H3.6z" fill="#2b2a2e"/><circle cx="12" cy="12.4" r="1.7" fill="#fff" opacity=".75"/>',
+      body: '<path d="M12 2.6l7.4 3v7.2c0 4.4-3.1 7.4-7.4 8.6-4.3-1.2-7.4-4.2-7.4-8.6V5.6z" fill="#c7d2da"/><path d="M12 2.6l7.4 3v7.2c0 4.4-3.1 7.4-7.4 8.6z" fill="#8d9aa5" opacity=".85"/><path d="M12 5.4l4.6 1.9v5.4c0 3-1.9 5.1-4.6 6.1z" fill="#fff" opacity=".22"/><path d="M4.6 5.6h14.8v1.6H4.6z" fill="currentColor"/>',
+      belt: '<path d="M2.4 9.4h19.2v5.2H2.4z" fill="#6b4a2e"/><path d="M2.4 9.4h19.2v1.4H2.4z" fill="#fff" opacity=".18"/><rect x="9.4" y="7.8" width="5.2" height="8.4" rx="1.2" fill="currentColor"/><rect x="11" y="10" width="2" height="4" rx=".6" fill="#2b2a2e" opacity=".7"/>',
+      boots: '<path d="M7.4 3.4h4.2v8.2c0 1.6 1.8 2.4 3.6 3.2 2 .9 2.8 2 2.8 3.4 0 1.5-1.1 2.4-3.2 2.4H7.4z" fill="#5f422c"/><path d="M7.4 3.4h4.2v8.2c0 1.6 1.8 2.4 3.6 3.2 2 .9 2.8 2 2.8 3.4 0 1.5-1.1 2.4-3.2 2.4H7.4z" fill="none" stroke="currentColor" stroke-width="1.4"/><path d="M6.6 18.2h11.4v2.6H6.6z" fill="#2b2a2e"/>',
+      necklace: '<path d="M6 4.6c0 6 2.6 9.4 6 9.4s6-3.4 6-9.4" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M12 12.4l3.6 3.2-1.4 4.6L12 18l-2.2 2.2-1.4-4.6z" fill="#bfe9ff"/><path d="M12 12.4l1.6 1.4-1.6 4.2-1.6-4.2z" fill="#fff" opacity=".65"/>',
+      ring: '<path d="M12 8.4a6.6 6.6 0 100 13.2 6.6 6.6 0 000-13.2zm0 2.6a4 4 0 110 8 4 4 0 010-8z" fill="currentColor"/><path d="M9.2 2.6h5.6l1.8 5.2H7.4z" fill="#cfe9ff"/><path d="M12 2.6l2.8 5.2H12z" fill="#fff" opacity=".7"/>',
+      talisman: '<path d="M6.6 2.6h10.8v14.8l-5.4 4-5.4-4z" fill="#e8dcc0"/><path d="M6.6 2.6h10.8v14.8l-5.4 4z" fill="#c9b995" opacity=".8"/><path d="M9.4 6h5.2M9.4 9h5.2M9.4 12h3.2" stroke="currentColor" stroke-width="1.5"/><circle cx="12" cy="16.6" r="1.8" fill="currentColor"/>'
+    };
+    return '<svg class="itm" viewBox="0 0 24 24" aria-hidden="true" style="color:' + (col || '#9ca3af') + '">' +
+      (A[slotId] || A.weapon) + '</svg>';
   }
 
   function slotIcon(slotId) {

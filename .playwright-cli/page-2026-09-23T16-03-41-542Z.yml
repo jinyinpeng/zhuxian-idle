@@ -1,0 +1,50 @@
+- generic [ref=f4e3]:
+  - generic [ref=f4e4]:
+    - generic [ref=f4e5]:
+      - button "角色属性" [ref=f4e6]: "128"
+      - generic [ref=f4e7]:
+        - generic [ref=f4e8]:
+          - text: 青剑
+          - generic [ref=f4e9]: 鬼王宗
+        - generic [ref=f4e10]: 渡劫期五层 · 战力 17.4万
+      - generic [ref=f4e11]:
+        - button "统计" [ref=f4e12] [cursor=pointer]
+        - button "设置" [ref=f4e15] [cursor=pointer]
+    - generic [ref=f4e18]:
+      - generic [ref=f4e19]: 497万
+      - generic [ref=f4e22]: "3791"
+      - generic [ref=f4e25]: 1.95万
+      - button "挂机开关" [ref=f4e28] [cursor=pointer]: 挂机中
+  - generic [ref=f4e31] [cursor=pointer]:
+    - generic:
+      - button "诛仙剑阵 Lv.104-165" [ref=f4e35]
+      - generic:
+        - generic: "--"
+        - generic: "0"
+    - generic [ref=f4e41]:
+      - generic [ref=f4e43]: 10.4万 / 10.4万
+      - generic [ref=f4e49]:
+        - generic [ref=f4e50]: Lv.128
+        - text: 青剑
+    - generic:
+      - generic: 一群妖物围了上来（2 只）
+      - generic: 施展【破剑式】，造成 31万 伤害
+      - generic: 一群妖物围了上来（2 只）
+      - generic: 施展【御剑术】，造成 8.79万 伤害
+      - generic: 一群妖物围了上来（3 只）
+  - generic [ref=f4e51]:
+    - generic [ref=f4e52]:
+      - generic [ref=f4e53]: 自动寻怪中
+      - generic [ref=f4e56]: 0.0 只/分
+    - generic [ref=f4e57]: 55.5万 / 90.1万 （61.7%）
+    - generic [ref=f4e60]:
+      - generic [ref=f4e61]: 战力 0
+      - generic [ref=f4e62]: DPS 0
+  - navigation [ref=f4e64]:
+    - button "挂机" [ref=f4e65] [cursor=pointer]
+    - button "行囊 1" [ref=f4e69] [cursor=pointer]:
+      - generic [ref=f4e72]: 行囊
+      - generic [ref=f4e73]: "1"
+    - button "技能" [ref=f4e74] [cursor=pointer]
+    - button "任务" [ref=f4e78] [cursor=pointer]
+    - button "社交" [ref=f4e82] [cursor=pointer]

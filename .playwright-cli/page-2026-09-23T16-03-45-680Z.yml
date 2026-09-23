@@ -1,0 +1,100 @@
+- generic [ref=f4e3]:
+  - generic [ref=f4e4]:
+    - generic [ref=f4e90]:
+      - button "角色属性" [ref=f4e91]: "128"
+      - generic [ref=f4e92]:
+        - generic [ref=f4e93]:
+          - text: 青剑
+          - generic [ref=f4e94]: 鬼王宗
+        - generic [ref=f4e95]: 渡劫期五层 · 战力 17.4万
+      - generic [ref=f4e96]:
+        - button "统计" [ref=f4e97] [cursor=pointer]
+        - button "设置" [ref=f4e100] [cursor=pointer]
+    - generic [ref=f4e103]:
+      - generic [ref=f4e104]: 499万
+      - generic [ref=f4e107]: "3791"
+      - generic [ref=f4e110]: 1.95万
+      - button "挂机开关" [ref=f4e113] [cursor=pointer]: 挂机中
+  - generic [ref=f4e31] [cursor=pointer]:
+    - generic:
+      - button "诛仙剑阵 Lv.104-165" [ref=f4e35]
+      - generic:
+        - generic: 968万
+        - generic: "1775"
+    - generic [ref=f4e40]:
+      - generic [ref=f4e41]:
+        - generic [ref=f4e43]: 10.4万 / 10.4万
+        - generic [ref=f4e49]:
+          - generic [ref=f4e50]: Lv.128
+          - text: 青剑
+      - generic [ref=f4e116]:
+        - generic [ref=f4e117]:
+          - generic [ref=f4e118]:
+            - generic [ref=f4e119]: Lv.118
+            - text: 剑阵凶灵
+          - generic [ref=f4e120]: 100%
+        - generic [ref=f4e124]:
+          - generic [ref=f4e125]:
+            - generic [ref=f4e126]: Lv.110
+            - text: 诛仙剑魄
+          - generic [ref=f4e127]: 100%
+    - generic: 闪避
+    - generic:
+      - generic: 施展【万剑归宗】，造成 7.09万 伤害
+      - generic: ★ 妖将现身：诛仙剑主（Lv.150），率 1 名手下
+      - generic: 施展【破剑式】，造成 30.4万 伤害
+      - generic: 施展【御剑术】，造成 8.5万 伤害
+      - generic: 一群妖物围了上来（2 只）
+  - generic [ref=f4e51]:
+    - generic [ref=f4e52]:
+      - generic [ref=f4e53]: 寻找妖物…
+      - generic [ref=f4e56]: 74.8 只/分
+    - generic [ref=f4e57]: 63.2万 / 90.1万 （70.2%）
+    - generic [ref=f4e60]:
+      - generic [ref=f4e61]: 战力 17.4万
+      - generic [ref=f4e62]: DPS 45.8万
+  - navigation [ref=f4e64]:
+    - button "挂机" [ref=f4e65] [cursor=pointer]
+    - button "行囊" [active] [ref=f4e131] [cursor=pointer]
+    - button "技能" [ref=f4e74] [cursor=pointer]
+    - button "任务" [ref=f4e78] [cursor=pointer]
+    - button "社交" [ref=f4e82] [cursor=pointer]
+  - generic [ref=f4e86]:
+    - generic [ref=f4e133]:
+      - generic [ref=f4e134]: 行囊61/60
+      - button [ref=f4e135] [cursor=pointer]
+    - generic [ref=f4e138]:
+      - button "装备" [ref=f4e139] [cursor=pointer]
+      - button "行囊" [ref=f4e142] [cursor=pointer]
+      - button "宝阁" [ref=f4e145] [cursor=pointer]
+    - generic [ref=f4e148]:
+      - generic [ref=f4e149]: 已着装备
+      - generic [ref=f4e152]:
+        - generic [ref=f4e153]:
+          - generic [ref=f4e155]: "+12"
+          - generic: 兵器
+        - generic [ref=f4e162]:
+          - generic [ref=f4e164]: "+12"
+          - generic: 头冠
+        - generic [ref=f4e170]:
+          - generic [ref=f4e172]: "+12"
+          - generic: 战甲
+        - generic [ref=f4e178]:
+          - generic [ref=f4e180]: "+12"
+          - generic: 腰带
+        - generic [ref=f4e186]:
+          - generic [ref=f4e188]: "+12"
+          - generic: 战靴
+        - generic [ref=f4e193]:
+          - generic [ref=f4e195]: "+12"
+          - generic: 项链
+        - generic [ref=f4e200]:
+          - generic [ref=f4e202]: "+12"
+          - generic: 戒指
+        - generic [ref=f4e207]:
+          - generic [ref=f4e209]: "+12"
+          - generic: 法宝
+    - generic [ref=f4e215]:
+      - button "寻宝 60" [ref=f4e216] [cursor=pointer]
+      - button "出售凡品" [ref=f4e219] [cursor=pointer]
+      - button "出售≤灵品" [ref=f4e220] [cursor=pointer]

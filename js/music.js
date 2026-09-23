@@ -11,6 +11,8 @@
   /* 主旋律（音阶下标，-1 = 休止）——循环，婉转不重复感 */
   const MEL = [5, 7, 6, 5, 4, 5, -1, 3, 4, 6, 7, 9, 8, 7, 6, -1,
     4, 5, 7, 8, 9, 10, 9, 7, 6, 5, 4, 5, 3, -1, 2, -1];
+  const MELB = [7, 8, 9, 7, 6, 5, 4, -1, 5, 6, 7, 5, 4, 3, 2, -1,
+    4, 6, 8, 9, 10, 9, 8, 7, 6, 5, 7, 6, 5, 4, 3, -1];
   const BASS = [0, 0, 3, 3, 4, 4, 0, 0];
 
   function init() {
@@ -64,17 +66,35 @@
     o.start(when); o.stop(when + dur + 0.05);
   }
 
+  /* 鼓点：低频正弦下滑，模拟远处战鼓 */
+  function drum(when, gain) {
+    const o = ac.createOscillator(), g = ac.createGain();
+    o.type = 'sine';
+    o.frequency.setValueAtTime(150, when);
+    o.frequency.exponentialRampToValueAtTime(48, when + 0.22);
+    g.gain.setValueAtTime(0.0001, when);
+    g.gain.exponentialRampToValueAtTime(gain, when + 0.01);
+    g.gain.exponentialRampToValueAtTime(0.0001, when + 0.34);
+    o.connect(g); g.connect(dryGain); g.connect(wet);
+    o.start(when); o.stop(when + 0.4);
+  }
+
   const BEAT = 0.62;            /* 每拍时长（秒） */
   /* 排下一拍：旋律 + 每 4 拍低音 + 偶尔的高音点缀 */
   function tick() {
     if (!on || !ac) return;
     const t0 = ac.currentTime + 0.08;
-    const idx = MEL[step % MEL.length];
+    const ph = Math.floor(step / 32) % 2;          /* A/B 两段交替 */
+    const line = ph ? MELB : MEL;
+    const idx = line[step % line.length];
     if (idx >= 0) pluck(SCALE[idx], t0, 1.9 + Math.random() * 0.5, 0.16 + Math.random() * 0.05);
+    /* 琶音织体：奇数拍补一个高八度和音，像古筝扫弦 */
+    if (step % 2 === 1) pluck(SCALE[(idx >= 0 ? idx : 4) + 0] * 1.5, t0 + 0.09, 1.1, 0.05);
     if (step % 4 === 0) {
       const b = BASS[(step / 4) % BASS.length];
       drone(SCALE[b] / 2, t0, BEAT * 4 + 1.2);
     }
+    if (step % 16 === 0) drum(t0, 0.16);            /* 每 16 拍一记远鼓 */
     if (step % 8 === 6 && Math.random() < 0.7) pluck(SCALE[10] * 2, t0 + 0.16, 1.2, 0.07);
     step++;
   }

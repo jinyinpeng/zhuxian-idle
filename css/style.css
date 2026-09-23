@@ -3400,3 +3400,9 @@ html[data-mode='day'] .si-radar-note { color: var(--s600); }
 html[data-mode='day'] .shop-card { background: #ffffff; border-color: rgba(23, 33, 43, .12); }
 html[data-mode='day'] .shop-price { color: #0369a1; }
 
+/* 装备实物小图（行囊 / 已着装备 / 详情头部） */
+.itm { display: block; filter: drop-shadow(0 1px 1.5px rgba(0, 0, 0, .5)); }
+.bag-cell .itm { width: 32px; height: 32px; margin: 0 auto; }
+.eq-slot .itm { width: 30px; height: 30px; }
+.ic-icon .itm { width: 30px; height: 30px; }
+
