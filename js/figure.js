@@ -489,10 +489,13 @@
      文件缺失时由 imgFig 的 onerror 自动回退到 mob-art.js 的矢量立绘 ✓ */
   var MOB_IMG = {
     beast: 'assets/mob_beast_art.png',
-    ghost: 'assets/mob_ghost_art.png',
+    /* 鬼物：半透明幽蓝主体，与背景同色系，试了绿幕/黑底两版都抠不干净；
+       妖将：生图把人裁在大腿以上，且背景带火光。两者先留空走矢量兜底，
+       避免每次加载都产生 404（图片一出好就加回这里）。 */
+    /* ghost: 'assets/mob_ghost_art.png', */
     demon: 'assets/mob_demon_art.png',
-    human: 'assets/mob_human_art.png',
-    boss: 'assets/mob_boss_art.png'
+    human: 'assets/mob_human_art.png'
+    /* boss: 'assets/mob_boss_art.png' */
   };
   /* 女版立绘（放在 assets 下即自动生效，例如 hero_qingyun_f.png；缺失则回退到通用图） */
   /* 女版立绘：现有通用女性形象 hero_female.png；
