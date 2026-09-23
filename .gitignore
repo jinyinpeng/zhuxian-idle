@@ -12,3 +12,11 @@ _*
 *~$*
 .DS_Store
 Thumbs.db
+
+# 开发期的临时产物：浏览器自动化快照、出图脚本与中间图
+.playwright-cli/
+_*.py
+_*.mjs
+_smoke.mjs
+*.png
+!assets/*.png
