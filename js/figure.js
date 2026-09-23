@@ -581,9 +581,9 @@
     if (typeof Image !== 'function') return;
     var all = [];
     [HERO_IMG, MOB_IMG].forEach(function (m) {
-      for (var k in m) if (m[k]) all.push(m[k]);
+      for (var k in m) if (m[k]) all.push(ver(m[k]));
     });
-    if (HERO_IMG_FALLBACK) all.push(HERO_IMG_FALLBACK);
+    if (HERO_IMG_FALLBACK) all.push(ver(HERO_IMG_FALLBACK));
     all.forEach(function (src) {
       if (IMG_OK[src] || IMG_BAD[src]) return;
       var im = new Image();
@@ -593,6 +593,31 @@
     });
   }
 
+  /* 立绘资源统一挂构建号查询串
+     换图时文件名不变，浏览器会继续用旧缓存 —— 表现就是「后台明明换了图，
+     手机上还是老样子（人物不在格子里）」。挂上 window.CUR（index.html 的
+     构建号）后，每次发版 URL 自动变化，强制取新图。 */
+  function buildVer() {
+    /* 构建号取自本文件自己的 <script src="js/figure.js?v=xxx">：
+       index.html 的 CUR 在 IIFE 里、取不到，读自身 URL 最稳。 */
+    try {
+      var all = document.getElementsByTagName('script');
+      for (var i = all.length - 1; i >= 0; i--) {
+        var s = all[i].getAttribute('src') || '';
+        if (s.indexOf('figure.js') >= 0) {
+          var m = s.match(/[?&]v=([^&]+)/);
+          return m ? decodeURIComponent(m[1]) : '';
+        }
+      }
+    } catch (e) { }
+    return '';
+  }
+  var BUILD = buildVer();
+
+  function ver(src) {
+    return src ? (src + (BUILD ? '?v=' + BUILD : '')) : '';
+  }
+
   function hero(sectId, gender) {
     if (gender === 'female') {
       /* v28：门派专属女版图 → 门派专属女版立绘（SVG）→（不再退回通用女图）。
@@ -600,14 +625,14 @@
          于是五个门派的女相全部是同一张通用图 —— 也就是「选女之后形象全都一样」。
          现在中间补一层「按门派绘制的女版 SVG」（hero-female.js）：
          五个门派各有其形，且与男版共用同一套门派配色与兵器。 */
-      var want = HERO_IMG_F[sectId] || '';
+      var want = ver(HERO_IMG_F[sectId]);
       var svgF = (global.HERO_FEMALE && global.HERO_FEMALE[sectId])
         ? global.HERO_FEMALE[sectId]()
         : heroSvgCached(sectId);
       if (!want || IMG_BAD[want]) return svgF;      /* 门派女版图缺失 → 用门派女版 SVG */
       return imgFig(want, { key: 'hf:' + sectId, gender: 'female', svg: svgF });
     }
-    var src = HERO_IMG[sectId];
+    var src = ver(HERO_IMG[sectId]);
     if (!src) return heroSvgCached(sectId);
     return imgFig(src, { key: 'hm:' + sectId, svg: heroSvgCached(sectId) });
   }

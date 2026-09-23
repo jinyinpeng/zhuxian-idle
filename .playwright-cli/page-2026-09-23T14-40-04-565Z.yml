@@ -1,0 +1,11 @@
+- generic [ref=f1e2]:
+  - generic [ref=f1e3]: hero_qingyun
+  - generic [ref=f1e7]: hero_guiwang
+  - generic [ref=f1e11]: hero_hehuan
+  - generic [ref=f1e15]: hero_tianyin
+  - generic [ref=f1e19]: hero_fenxiang
+  - generic [ref=f1e23]: hero_qingyun_f
+  - generic [ref=f1e27]: hero_guiwang_f
+  - generic [ref=f1e31]: hero_hehuan_f
+  - generic [ref=f1e35]: hero_tianyin_f
+  - generic [ref=f1e39]: hero_fenxiang_f

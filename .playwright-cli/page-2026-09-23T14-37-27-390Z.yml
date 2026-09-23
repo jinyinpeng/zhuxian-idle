@@ -1,0 +1,44 @@
+- generic [ref=e8]:
+  - generic [ref=e9]:
+    - heading "诛仙问道" [level=1] [ref=e13]
+    - paragraph [ref=e14]: 一剑霜寒十四州 · 万古仙途任我行
+  - generic [ref=e15]:
+    - generic [ref=e16]:
+      - generic [ref=e17]: 道号
+      - textbox [ref=e18]: 血凤鸣
+      - button "随机道号" [ref=e19] [cursor=pointer]
+    - generic [ref=e22]: 性别
+    - generic [ref=e23]:
+      - button "男" [ref=e24] [cursor=pointer]
+      - button "女" [ref=e25] [cursor=pointer]
+    - generic [ref=e26]: 择一门派
+    - generic [ref=e27]:
+      - button "青云门" [ref=e28] [cursor=pointer]
+      - button "鬼王宗" [ref=e31] [cursor=pointer]
+      - button "合欢派" [ref=e34] [cursor=pointer]
+      - button "天音寺" [ref=e37] [cursor=pointer]
+      - button "焚香谷" [ref=e40] [cursor=pointer]
+    - generic [ref=e43]:
+      - generic [ref=e44]:
+        - generic [ref=e45]: 青云门
+        - generic [ref=e46]: 剑修 · 高暴击
+      - paragraph [ref=e47]: 正道之首 · 御剑诛邪
+      - paragraph [ref=e48]: 以太极玄清道御剑千里，出手凌厉，暴击冠绝天下。
+      - generic [ref=e49]:
+        - img "门派属性六角星" [ref=e50]:
+          - generic [ref=e66]: 气血
+          - generic [ref=e67]: "1.00"
+          - generic [ref=e68]: 攻击
+          - generic [ref=e69]: "1.22"
+          - generic [ref=e70]: 防御
+          - generic [ref=e71]: "1.00"
+          - generic [ref=e72]: 暴击
+          - generic [ref=e73]: "1.35"
+          - generic [ref=e74]: 闪避
+          - generic [ref=e75]: "1.00"
+          - generic [ref=e76]: 攻速
+          - generic [ref=e77]: "1.05"
+        - generic [ref=e78]: 六角星外圈为该门派的属性上限，顶点越靠外越强
+      - generic [ref=e79]: 【御剑诀】暴击伤害 +30%
+  - button "踏 入 仙 途" [ref=e80] [cursor=pointer]
+  - paragraph [ref=e81]: 游戏自动挂机，离线亦可积累收益
