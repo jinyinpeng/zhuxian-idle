@@ -180,14 +180,14 @@
           pose.yaw += lerp(-7 * kp, 9 * kp, k);
           pose.y -= 2.2 * kp * sin(k * PI);
           pose.x += 3.0 * kp * S.sway;       /* 连斩：侧身换位 */
-          pose.arm = lerp(-9 * kp, 15 * kp, k);   /* 兵器劈下：手臂从后上甩到前下 */
+          pose.arm = lerp(-8 * kp, 11 * kp, k);   /* 兵器劈下：手臂从后上甩到前下 */
           fireRelease(p, 0.5);
         } else {                             /* ④ 收势：卸力回位 */
           const k = easeInOut((p - 0.58) / 0.42);
           pose.x += lerp(7 * kp * kd, 0, k);
           pose.lean += lerp(7 * kp, 0, k);
           pose.yaw += lerp(9 * kp, 0, k);
-          pose.arm = lerp(15 * kp, 0, k);    /* 手臂收回身侧 */
+          pose.arm = lerp(11 * kp, 0, k);    /* 手臂收回身侧 */
         }
         if (p >= 1) setMode('idle');
       }
@@ -204,9 +204,9 @@
         pose.yaw += 6 * sin(p * PI) * S.spin;
         pose.x += 3.6 * c * S.sway;          /* 侧身位：起手先侧让再出面 */
         /* 施法的手：掐诀时手臂抬起（-16°）→ 送出时向前推出（+10°）→ 收回身侧 */
-        if (p < 0.62) pose.arm = -16 * kp * easeOut(p / 0.62);
-        else if (p < 0.78) pose.arm = lerp(-16 * kp, 10 * kp, easeOut((p - 0.62) / 0.16));
-        else pose.arm = lerp(10 * kp, 0, easeInOut((p - 0.78) / 0.22));
+        if (p < 0.62) pose.arm = -11 * kp * easeOut(p / 0.62);
+        else if (p < 0.78) pose.arm = lerp(-11 * kp, 8 * kp, easeOut((p - 0.62) / 0.16));
+        else pose.arm = lerp(8 * kp, 0, easeInOut((p - 0.78) / 0.22));
         fireRelease(p, 0.62);
         if (p >= 1) setMode('idle');
       }

@@ -502,6 +502,25 @@ input { font-family: inherit; }
   overflow: visible;
   filter: drop-shadow(0 8px 10px rgba(0,0,0,.66));
 }
+/* 拆层立绘（身体层 + 手臂层）：
+   两张图是同一块 373×520 画布，绝对定位完全重合 —— 静止时叠起来就是原图，
+   手臂层绕肩关节（--ox/--oy，由 assets/hero_rig.js 按图给出）旋转。
+   旋转角度来自动作系统的 --arm：抬手、施法前推、举兵器劈下都是这一层在动。
+   宽度由身体层这张 <img> 自己撑出来（原来直接就是 <img>，靠图片自身的宽高比；
+   换成 <span> 后没有固有比例，必须让身体层留在文档流里当"尺寸基准"，
+   否则容器会塌成 0 宽）。 */
+.fig-split { display: block; }
+.fig-split .fig-body { position: static; height: 100%; width: auto; }
+.fig-split .fig-layer { filter: brightness(1.16) contrast(1.05) saturate(1.06); }
+.fig-split .fig-arm {
+  position: absolute; left: 0; top: 0; width: 100%; height: 100%;
+  object-fit: contain;
+}
+.fig-split .fig-arm {
+  transform-origin: var(--ox, 50%) var(--oy, 26%);
+  transform: rotate(calc(var(--arm, 0) * 1deg));
+  will-change: transform;
+}
 /* 脚下灵光 */
 .avatar::before {
   content: '';

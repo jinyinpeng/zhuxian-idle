@@ -542,6 +542,22 @@
     var key = opt.key || '';
     if (!src || IMG_BAD[src]) return fbSvg;
     if (key) FB[key] = fbSvg;
+    /* 拆层立绘：身体层 + 手臂层。两层是同一块画布，绝对定位严丝合缝地叠在一起 ——
+       静止时叠起来就是原图，抬手时手臂层绕肩关节（--ox/--oy）转开。
+       任一层取不到就退回单张整图（绝不出现"只有身体没有手臂"）。 */
+    if (opt.body && opt.arm && !IMG_BAD[opt.body] && !IMG_BAD[opt.arm]) {
+      var rig = (global.HERO_RIG || {})[opt.rigKey] || [50, 26];
+      return '<span class="fig fig-split' + (opt.cls ? ' ' + opt.cls : '') + '"' +
+        (opt.gender ? ' data-gender="' + opt.gender + '"' : '') +
+        ' data-orig="' + src + '"' +
+        ' style="--ox:' + rig[0] + '%;--oy:' + rig[1] + '%">' +
+        '<img class="fig-layer fig-body" src="' + opt.body + '" alt="" draggable="false"' +
+        (key ? ' data-fb="' + key + '"' : '') +
+        ' onerror="window.FIGURE.__splitFail(this)">' +
+        '<img class="fig-layer fig-arm" src="' + opt.arm + '" alt="" draggable="false"' +
+        ' onerror="window.FIGURE.__splitFail(this)">' +
+        '</span>';
+    }
     return '<img class="fig' + (opt.cls ? ' ' + opt.cls : '') + '" src="' + src + '"' +
       (opt.gender ? ' data-gender="' + opt.gender + '"' : '') +
       (opt.chain && opt.chain.length ? ' data-next="' + opt.chain.join('|') + '"' : '') +
@@ -638,11 +654,17 @@
         ? global.HERO_FEMALE[sectId]()
         : heroSvgCached(sectId);
       if (!want || IMG_BAD[want]) return svgF;      /* 门派女版图缺失 → 用门派女版 SVG */
-      return imgFig(want, { key: 'hf:' + sectId, gender: 'female', svg: svgF });
+      return imgFig(want, { key: 'hf:' + sectId, gender: 'female', svg: svgF,
+        body: ver(HERO_IMG_F[sectId].replace(/\.png$/, '_body.png')),
+        arm: ver(HERO_IMG_F[sectId].replace(/\.png$/, '_arm.png')),
+        rigKey: sectId + '_f' });
     }
     var src = ver(HERO_IMG[sectId]);
     if (!src) return heroSvgCached(sectId);
-    return imgFig(src, { key: 'hm:' + sectId, svg: heroSvgCached(sectId) });
+    return imgFig(src, { key: 'hm:' + sectId, svg: heroSvgCached(sectId),
+      body: ver(HERO_IMG[sectId].replace(/\.png$/, '_body.png')),
+      arm: ver(HERO_IMG[sectId].replace(/\.png$/, '_arm.png')),
+      rigKey: sectId });
   }
   function monster(family, elite) {
     var src = ver(MOB_IMG[family]);
@@ -654,11 +676,30 @@
     });
   }
 
+  /* 拆层立绘某一层挂了（未拆分 / 部署漏传）：整体退回单张整图；
+     整图也挂了才交给内置 SVG 链，任何情况下都不会出现"缺手臂"或空白。 */
+  function __splitFail(img) {
+    var host = img && img.parentNode;
+    var orig = host && host.getAttribute ? host.getAttribute('data-orig') : '';
+    if (!host || !orig) return;
+    IMG_BAD[img.getAttribute('src') || ''] = true;
+    var arm = host.querySelector('.fig-arm');
+    var body = host.querySelector('.fig-body');
+    if (arm && arm !== img && arm.parentNode) arm.parentNode.removeChild(arm);
+    if (body && !IMG_BAD[orig]) {
+      if (body !== img) body.setAttribute('src', orig);
+      else { img.setAttribute('src', orig); }
+      body.onerror = function () { __fail(body); };
+      return;
+    }
+    __fail(body || img);
+  }
+
   probe();
 
   global.FIGURE = {
     hero: hero, monster: monster, heroSvg: heroSvg, monsterSvg: monsterSvg,
-    __fail: __fail, probe: probe, ver: ver,
+    __fail: __fail, __splitFail: __splitFail, probe: probe, ver: ver,
     isBad: function (src) { return !!IMG_BAD[src]; },
     HERO_IMG: HERO_IMG, MOB_IMG: MOB_IMG, HERO_IMG_F: HERO_IMG_F,
     HERO_IMG_FALLBACK: HERO_IMG_FALLBACK, SECT_LOOK: SECT_LOOK, MOB_LOOK: MOB_LOOK
