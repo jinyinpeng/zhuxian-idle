@@ -1106,6 +1106,76 @@ html, body { overscroll-behavior-y: auto; }
 .cast-pillar.tall { height: 96%; }
 
 /* ── v6 门派群攻特效 ── */
+/* —— 技能特效基元（配合 render.js 的 skillBurst / castPose）——
+   每个基元只负责一种"动作"，真正常出花样的是它们的组合方式：
+   突刺＝贯穿光、爆发＝冲击波、连击＝连续火花、绝技＝内收后炸开 + 留场。 */
+.sk-shockwave {
+  width: 54px; height: 54px; border-radius: 50%;
+  border: 2px solid var(--c, #fff);
+  box-shadow: 0 0 14px var(--c, #fff), inset 0 0 10px var(--c, #fff);
+  animation: skShock .62s cubic-bezier(.16, .9, .3, 1) forwards;
+}
+.sk-shockwave.in { animation: skShockIn .38s ease-in forwards; }
+.sk-spark {
+  width: 4px; height: 4px; border-radius: 50%;
+  background: var(--c, #fff); box-shadow: 0 0 8px var(--c, #fff);
+  animation: skSpark .55s ease-out forwards;
+}
+.sk-lance {
+  width: 92px; height: 2px; border-radius: 2px;
+  background: linear-gradient(90deg, transparent, var(--c, #fff), transparent);
+  animation: skLance .46s ease-out forwards;
+}
+.sk-field {
+  width: 74px; height: 30px; border-radius: 50%;
+  background: radial-gradient(ellipse at center, var(--c, #fff), transparent 68%);
+  animation: skField 1.4s ease-out forwards;
+}
+/* 施法者身上的字诀（剑/鬼/蝶/梵/焚）与冲刺光 */
+.cast-rune {
+  position: absolute; pointer-events: none;
+  font-size: 17px; font-weight: 700; transform: translate(-50%, -50%);
+  text-shadow: 0 0 10px currentColor, 0 0 22px currentColor;
+  animation: castRune 1.05s ease-out forwards;
+}
+.cast-dash {
+  position: absolute; pointer-events: none;
+  width: 60px; height: 3px; border-radius: 3px;
+  background: linear-gradient(90deg, transparent, currentColor, transparent);
+  animation: castDash .45s ease-out forwards;
+}
+@keyframes skShock {
+  0% { transform: translate(-50%, -50%) scale(.18); opacity: 1; }
+  100% { transform: translate(-50%, -50%) scale(1.95); opacity: 0; }
+}
+@keyframes skShockIn {
+  0% { transform: translate(-50%, -50%) scale(1.95); opacity: .9; }
+  100% { transform: translate(-50%, -50%) scale(.22); opacity: 0; }
+}
+@keyframes skSpark {
+  0% { transform: translate(-50%, -50%) scale(1.1); opacity: 1; }
+  100% { transform: translate(calc(-50% + var(--dx, 0px)), calc(-50% + var(--dy, 0px))) scale(.3); opacity: 0; }
+}
+@keyframes skLance {
+  0% { transform: translate(-50%, -50%) scaleX(.1); opacity: 0; }
+  35% { opacity: 1; }
+  100% { transform: translate(-50%, -50%) scaleX(1.6); opacity: 0; }
+}
+@keyframes skField {
+  0% { transform: translate(-50%, -50%) scale(.4); opacity: 0; }
+  25% { opacity: .85; }
+  100% { transform: translate(-50%, -50%) scale(1.25); opacity: 0; }
+}
+@keyframes castRune {
+  0% { transform: translate(-50%, -10%) scale(.5); opacity: 0; }
+  25% { opacity: 1; }
+  100% { transform: translate(-50%, -190%) scale(1.15); opacity: 0; }
+}
+@keyframes castDash {
+  0% { transform: translate(-50%, -50%) scaleX(.2); opacity: 0; }
+  30% { opacity: 1; }
+  100% { transform: translate(-50%, -50%) scaleX(1.5); opacity: 0; }
+}
 .sk-fx { position: absolute; pointer-events: none; transform: translate(-50%, -50%); }
 /* 青云门 · 剑气纵横 */
 .sk-sword {

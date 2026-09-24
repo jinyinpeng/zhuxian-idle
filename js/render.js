@@ -874,54 +874,79 @@
     setTimeout(() => d.remove(), 400);
   }
 
-  /* v6：门派群攻特效 —— 对每个命中目标按门派生成不同表现 */
+  /* 技能特效 = 门派母题 × 技能位原型。两维相乘 → 25 套互不相同的表现。
+
+     此前是「门派固定一个形状」+「技能位固定一个通用形态」：同一个门派五个技能
+     看起来只是换了个光环，不同门派同一位置的技能又长得差不多 —— 等于没有"自己的特效"。
+     现在形状跟着门派走（剑光/鬼爪/飞花/梵环/火舌），节奏与构图跟着技能位走：
+       s1 突刺  · s2 爆发  · s3 增益（不落在敌人身上）· s4 连击  · s5 绝技 */
+  const FX_MOTIF = {
+    qingyun: { shape: 'sk-sword', tint: '#5eead4', extra: 'sk-form-cross', glyph: '剑' },
+    guiwang: { shape: 'sk-claw', tint: '#c084fc', extra: 'sk-form-burst', glyph: '鬼' },
+    hehuan: { shape: 'sk-petal', tint: '#f472b6', extra: 'sk-form-halo', glyph: '蝶' },
+    tianyin: { shape: 'sk-ring', tint: '#fbbf24', extra: 'sk-form-fall', glyph: '梵' },
+    fenxiang: { shape: 'sk-flame', tint: '#fb923c', extra: 'sk-form-line', glyph: '焚' }
+  };
+
   function skillBurst(sectId, list, slot) {
     if (!el.cast || !list || !list.length) return;
-    const color = (G.sectOf(G.state.sect) || {}).color || '#5eead4';
+    const M = FX_MOTIF[sectId] || FX_MOTIF.qingyun;
+    const color = (G.sectOf(G.state.sect) || {}).color || M.tint;
+    const s = Math.max(0, Math.min(4, slot || 0));
+    if (s === 2) return;                 /* 增益：不砸敌人，表现挂在施法者身上 */
     for (let i = 0; i < list.length; i++) {
       const m = list[i];
       if (!m) continue;
       const p = unitPos('mob', m.idx);
-      const mk = function (cls, vars, life) {
-        const d = document.createElement('div');
-        d.className = 'sk-fx ' + cls;
-        d.style.left = p.x + 'px';
-        d.style.top = p.y + 'px';
-        if (vars) { for (const k in vars) d.style.setProperty(k, vars[k]); }
-        el.cast.appendChild(d);
-        setTimeout(function () { d.remove(); }, life || 1000);
+      const at = function (cls, vars, life, delay) {
+        const run = function () {
+          const d = document.createElement('div');
+          d.className = 'sk-fx ' + cls;
+          d.style.left = p.x + 'px';
+          d.style.top = p.y + 'px';
+          if (vars) { for (const k in vars) d.style.setProperty(k, vars[k]); }
+          el.cast.appendChild(d);
+          setTimeout(function () { d.remove(); }, life || 1000);
+        };
+        if (delay) setTimeout(run, delay); else run();
       };
-      if (sectId === 'qingyun') {
-        mk('sk-sword', { '--a': '17deg' });
-        mk('sk-sword', { '--a': '-19deg' });
-        burst('mob', color, 12, m.idx);
-      } else if (sectId === 'guiwang') {
-        mk('sk-claw');
-        mk('sk-claw', { width: '34px', height: '34px' });
-        burst('mob', '#c084fc', 12, m.idx);
-      } else if (sectId === 'hehuan') {
-        for (let k = 0; k < 5; k++) {
-          mk('sk-petal', {
-            '--dx': (Math.round((Math.random() - 0.5) * 74)) + 'px',
-            '--dy': (Math.round(-28 - Math.random() * 52)) + 'px'
-          });
+      const sparks = function (n, spread) {
+        for (let k = 0; k < n; k++) {
+          const a = (Math.PI * 2 * k) / n + Math.random() * 0.5;
+          const r = 18 + Math.random() * spread;
+          at('sk-spark', {
+            '--dx': Math.round(Math.cos(a) * r) + 'px',
+            '--dy': Math.round(Math.sin(a) * r) + 'px',
+            '--c': M.tint
+          }, 560, Math.random() * 90);
         }
-        burst('mob', '#f472b6', 8, m.idx);
-      } else if (sectId === 'tianyin') {
-        mk('sk-ring');
-        setTimeout(function () {
-          mk('sk-ring', { width: '30px', height: '30px' });
-        }, 90);
-        burst('mob', '#fbbf24', 10, m.idx);
-      } else {
-        mk('sk-flame');
-        burst('mob', '#fb923c', 14, m.idx);
+      };
+      if (s === 0) {                     /* 突刺：两段错开的直刺 + 一线贯穿 */
+        at(M.shape, { '--a': '15deg' }, 620);
+        at(M.shape, { '--a': '-18deg' }, 620, 80);
+        at('sk-lance', { '--c': M.tint }, 480);
+        sparks(3, 16);
+      } else if (s === 1) {              /* 爆发：双圈冲击波 + 四散火星 */
+        at('sk-shockwave', { '--c': M.tint }, 640);
+        at('sk-shockwave', { '--c': M.tint, width: '94px', height: '94px' }, 700, 90);
+        at(M.shape, { width: '40px', height: '40px' }, 620);
+        sparks(8, 30);
+      } else if (s === 3) {              /* 连击：五记快打，一记比一记重 */
+        for (let k = 0; k < 5; k++) {
+          at(M.shape, { '--a': (k * 9 - 18) + 'deg' }, 420, k * 72);
+          at('sk-spark', {
+            '--dx': Math.round((k - 2) * 9) + 'px', '--dy': '-26px', '--c': M.tint
+          }, 460, k * 72);
+        }
+        at('sk-form-ring', { '--c': color }, 900, 300);
+      } else {                           /* s4 绝技：先塌陷内收，再炸开，最后留场 */
+        at('sk-shockwave in', { '--c': M.tint }, 400);
+        at('sk-shockwave', { '--c': M.tint, width: '110px', height: '110px' }, 880, 210);
+        at(M.extra, { '--c': color }, 900, 210);
+        at('sk-field', { '--c': M.tint }, 1500, 240);
+        sparks(10, 40);
       }
-      /* —— 技能位形态：同门派五个技能各打各的落点，观感不再千篇一律 ——
-         s1 直线剑光 · s2 交叉斩痕+溅血 · s3 上升光环 · s4 天降光柱 · s5 大爆炸 */
-      const F = ['sk-form-line', 'sk-form-cross', 'sk-form-halo', 'sk-form-fall', 'sk-form-burst'][slot || 0];
-      if (F) mk(F, { '--c': color }, slot === 4 ? 1200 : 880);
-      if (slot === 4) mk('sk-form-ring', { '--c': color }, 1100);
+      burst('mob', M.tint, s === 4 ? 22 : (s === 3 ? 9 : 12), m.idx);
     }
   }
 
@@ -951,10 +976,29 @@
     mk('cast-ring-layer l2', 800);
     mk('cast-pillar', 760);
     mk('cast-flash', 440);
-    /* 施法者脚下的表现也按技能位区分：增益走光环、绝技走冲天光柱 */
-    if (slot === 2) { mk('cast-halo', 900); }
+    /* 施法者自身的表现也按技能位区分 —— 突刺轻快、爆发外扩、增益内敛、
+       连击带符环、绝技最张扬，五个技能一眼能分辨。 */
+    if (slot === 0) { mk('cast-dash', 520); }
+    if (slot === 1) { mk('cast-halo', 760); mk('cast-ring-layer l2', 700); }
+    if (slot === 2) { mk('cast-halo wide', 1000); }
     if (slot === 3) { mk('cast-sigil', 900); }
     if (slot === 4) { mk('cast-pillar tall', 1000); mk('cast-halo wide', 1000); }
+    /* 增益/连击：门派字诀（剑/鬼/蝶/梵/焚）自脚下升起 —— 同一个技能位，五个门派
+       也是五种样子，而不是同一个光环换个颜色。 */
+    if (slot === 2 || slot === 3) {
+      const mot = FX_MOTIF[G.state.sect] || FX_MOTIF.qingyun;
+      for (let k = 0; k < 3; k++) {
+        const r = document.createElement('div');
+        r.className = 'cast-rune';
+        r.textContent = mot.glyph;
+        r.style.left = (p.x + (k - 1) * 21) + 'px';
+        r.style.top = p.y + 'px';
+        r.style.color = col;
+        r.style.animationDelay = (k * 0.13) + 's';
+        el.cast.appendChild(r);
+        setTimeout(function () { r.remove(); }, 1150);
+      }
+    }
     /* 手心法球与符纹（贴在角色身上，跟随 avatar 布局） */
     const palm = document.createElement('div');
     palm.className = 'palm-orb';
