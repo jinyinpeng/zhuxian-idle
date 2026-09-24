@@ -2327,6 +2327,25 @@ html, body { overscroll-behavior-y: auto; }
 .stat-diff { color: var(--green); font-size: 11px; }
 .stat-diff.down { color: var(--blood); }
 
+/* ---------- 面板打开时的背景降载 ----------
+   症状：点开行囊 / 技能后整体"不丝滑"。两层原因叠加才致命：
+     ① 面板用毛玻璃（backdrop-filter）—— 背后场景每变一帧，模糊都要重算一次；
+     ② 背后每个立绘都挂着好几层 drop-shadow，且待机 / 动作动画一直在跑。
+   处理：面板打开期间（html.ui-busy）停掉背景动画、去掉立绘阴影与毛玻璃 ——
+   遮罩已经把背景压暗，观感差别很小，但每帧的合成成本降了一个量级。 */
+html.ui-busy .unit *, html.ui-busy .arena *, html.ui-busy .bg * { animation-play-state: paused !important; }
+html.ui-busy .unit .fig, html.ui-busy .unit .fig-layer { filter: none !important; }
+html.ui-busy .sheet, html.ui-busy .card, html.ui-busy .modal, html.ui-busy .pop {
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+/* 面板内滚动：交给合成器，并把滚动"链"断在面板里（不再带着背景一起滚） */
+.sheet-body, .modal-body {
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+  will-change: scroll-position;
+}
+
 /* 滚动条 */
 .sheet-body::-webkit-scrollbar, .modal-body::-webkit-scrollbar, .create-inner::-webkit-scrollbar { width: 3px; }
 .sheet-body::-webkit-scrollbar-thumb, .modal-body::-webkit-scrollbar-thumb, .create-inner::-webkit-scrollbar-thumb {

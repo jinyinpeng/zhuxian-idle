@@ -152,6 +152,14 @@
       '<section class="sheet" id="sheet-' + id + '"></section>'
     ).join('');
   }
+  /* 面板/弹窗打开时给背景"降载"：面板自带毛玻璃，背后场景还在跑动画、立绘还挂着
+     多层阴影 —— 两者叠加就是"点开行囊/技能后不丝滑"的根因。
+     html.ui-busy 的规则见 style.css（停背景动画、去阴影与毛玻璃）。 */
+  function syncBusy() {
+    const d = document.documentElement;
+    const busy = !!UI.sheet || el.modal.classList.contains('on');
+    if (d.classList.contains('ui-busy') !== busy) d.classList.toggle('ui-busy', busy);
+  }
   function openSheet(id) {
     UI.sheet = id;
     const node = document.getElementById('sheet-' + id);
@@ -160,12 +168,14 @@
     el.mask.classList.add('on');
     if (id === 'bag') { G.state.bag.forEach(i => i.isNew = false); tickBadges(); }
     if (id === 'quest') UI.questSig = questSig();
+    syncBusy();
   }
   function closeSheet() {
     UI.sheet = '';
     el.sheets.querySelectorAll('.sheet').forEach(s => s.classList.remove('on'));
     el.mask.classList.remove('on');
     tickBadges();
+    syncBusy();
   }
   /* 面板内容签名：只有真正变了才重建（否则会打断用户浏览/滚动） */
   function sheetSig(id) {
@@ -383,6 +393,20 @@
     html += '</div>';
     html += '</div>';
     return html;
+  }
+
+  /* 点装备 → 弹「详情 + 强化」页（强化、装备/卸下、出售都在这一页里） */
+  function showItemModal(uid) {
+    const ref = uid ? G.findItem(uid) : null;
+    if (!ref) { closeModal(); return; }
+    const q = G.qualityOf(ref.item);
+    openModal({
+      kind: 'item',
+      title: '装备详情',
+      sub: '<span style="color:' + q.color + '">' + esc(ref.item.name) + '</span> · ' +
+        q.name + ' · ' + (ref.where === 'bag' ? '在行囊中' : '已装备'),
+      body: itemDetail(ref)
+    });
   }
 
   /* ============================ 技能面板 ============================ */
@@ -617,7 +641,14 @@
       case 'stab': UI.tab.social = node.getAttribute('data-v'); renderSheet('social'); break;
       case 'sel': {
         const uid = node.getAttribute('data-uid');
-        if (uid) { UI.bagSel = (UI.bagSel === uid ? null : uid); renderSheet('bag'); }
+        if (uid) {
+          UI.bagSel = uid;
+          renderSheet('bag');
+          /* 点装备 → 直接弹出「详情 + 强化」页。
+             以前只是把详情卡片渲染在列表下方，小屏上常常要滚动才看得到，
+             手感上就是"点了没反应"，更别说找强化按钮。 */
+          showItemModal(uid);
+        }
         else {
           UI.tab.bag = 'bag';
           R.toast('该部位尚未装备，穿戴一件试试');
@@ -790,6 +821,9 @@
         break;
       }
     }
+    /* 强化 / 装备 / 卸下之后：详情弹窗若开着就原地刷新，
+       否则点完按钮弹窗里还是旧数值，看起来像"点了没用"。 */
+    if (modalKind === 'item' && /^(enh|equip|unequip)$/.test(act)) showItemModal(UI.bagSel);
   }
 
   /* 行囊/身上装备的图标：按部位画"实物"小图（金属高光 + 暗面 + 木质/皮革），
@@ -856,8 +890,9 @@
       });
     });
     el.modal.classList.add('on');
+    syncBusy();
   }
-  function closeModal() { el.modal.classList.remove('on'); modalKind = ''; }
+  function closeModal() { el.modal.classList.remove('on'); modalKind = ''; syncBusy(); }
 
   function openStats() {
     UI.tab.social = 'stat';
