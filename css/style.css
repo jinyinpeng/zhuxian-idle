@@ -2345,6 +2345,7 @@ html, body { overscroll-behavior-y: auto; }
           每层 transform-origin 落在真实关节位置，转动的是关节而不是整张图平移）
    ========================================================================= */
 .fm { position: absolute; inset: 0; pointer-events: none; }
+
 .fm-hips  { transform-origin: 50% 100%; }   /* 地面：重心转移 / 起跳（脚底不动） */
 .fm-spine { transform-origin: 50% 64%; }    /* 腰：前倾 / 后仰 / 扭腰 */
 .fm-spin  { transform-origin: 50% 58%; transform-style: preserve-3d; }  /* 体轴：3D 转身 */
@@ -2466,6 +2467,12 @@ html, body { overscroll-behavior-y: auto; }
   30%  { opacity: 1; transform: scale(1.05); }
   62%  { opacity: .95; transform: scale(1.5); }
   100% { opacity: 0; transform: scale(.5); }
+}
+/* 法球跟随手臂：--arm 由 figure-motion 每帧写入（负＝手臂上举，正＝前推）。
+   用 margin 而不是 transform —— 法球自身的 palmGrow 动画正在改 transform。 */
+.unit .palm-orb {
+  margin-top: calc(-12px + var(--arm, 0) * 1.6px);
+  margin-left: calc(-12px + var(--arm, 0) * 0.5px);
 }
 /* 手心符纹（随法球旋转） */
 .palm-rune {

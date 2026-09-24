@@ -20,7 +20,7 @@
      它们由下面的动作曲线逐帧给出，避免「姿态值 + 曲线」把同一个角度算两遍
      （会把立绘歪到 20° 以上）。这里只保留静态姿势差异（如打坐）。 */
   const POSES = {
-    idle:   { lean: 0, rot: 0, yaw: 0, x: 0, y: 0, sy: 1,    sx: 1,    skew: 0 },
+    idle:   { lean: 0, rot: 0, yaw: 0, x: 0, y: 0, sy: 1,    sx: 1,    skew: 0, arm: 0 },
     walk:   { lean: 0, rot: 0, yaw: 0, x: 0, y: 0, sy: 1,    sx: 1,    skew: 0 },
     attack: { lean: 0, rot: 0, yaw: 0, x: 0, y: 0, sy: 1,    sx: 1,    skew: 0 },
     cast:   { lean: 0, rot: 0, yaw: 0, x: 0, y: 0, sy: 1,    sx: 1,    skew: 0 },
@@ -28,7 +28,8 @@
     jump:   { lean: 0, rot: 0, yaw: 0, x: 0, y: 0, sy: 1,    sx: 1,    skew: 0 },
     think:  { lean: 4, rot: 0, yaw: 0, x: 0, y: 6, sy: 0.98, sx: 1.02, skew: 0 }
   };
-  const KEYS = ['lean', 'rot', 'yaw', 'x', 'y', 'sy', 'sx', 'skew'];
+  /* arm = 上半身（含手臂）绕肩关节的额外旋转，用来做「抬手 / 举兵器」 */
+  const KEYS = ['lean', 'rot', 'yaw', 'x', 'y', 'sy', 'sx', 'skew', 'arm'];
 
   function lerp(a, b, t) { return a + (b - a) * t; }
   /* 技能动作风格表：一套曲线上按技能类型缩放幅度与节奏 ——
@@ -93,6 +94,9 @@
     view.classList.remove('fig-src-hidden');
     view.classList.add('fig-view');
     body.appendChild(view);
+    /* 手臂姿态走 CSS 变量传出去（--arm：正值=前推，负值=上举）。
+       不给立绘再叠一层裁切副本 —— 试过，两层位图叠加会在腰际留下可见接缝，
+       尤其是半透明边缘会叠成亮边。改由"手部法球 + 挥击弧光"来表现手在动。 */
     avatar.appendChild(hips);
     fig.classList.add('fig-src-hidden');       /* 原节点留在 DOM 里，只隐藏 */
     unitNode.classList.add('fig-motion');
@@ -168,6 +172,7 @@
         if (p < 0.3) {                       /* ① 蓄力：后撤、沉肩、体轴反拧 */
           const k = easeOut(p / 0.3) * kp;
           pose.x -= 4 * k * kd; pose.lean -= 4 * k; pose.yaw -= 7 * k;
+          pose.arm = -9 * k;                 /* 抬兵器：蓄力时先把手往后上方举 */
         } else if (p < 0.58) {               /* ② 发劲 → ③ 送出：前压刺出，重心的冲量最大 */
           const k = easeOut((p - 0.3) / 0.28);
           pose.x += lerp(-4 * kp * kd, 7 * kp * kd, k);
@@ -175,12 +180,14 @@
           pose.yaw += lerp(-7 * kp, 9 * kp, k);
           pose.y -= 2.2 * kp * sin(k * PI);
           pose.x += 3.0 * kp * S.sway;       /* 连斩：侧身换位 */
+          pose.arm = lerp(-9 * kp, 15 * kp, k);   /* 兵器劈下：手臂从后上甩到前下 */
           fireRelease(p, 0.5);
         } else {                             /* ④ 收势：卸力回位 */
           const k = easeInOut((p - 0.58) / 0.42);
           pose.x += lerp(7 * kp * kd, 0, k);
           pose.lean += lerp(7 * kp, 0, k);
           pose.yaw += lerp(9 * kp, 0, k);
+          pose.arm = lerp(15 * kp, 0, k);    /* 手臂收回身侧 */
         }
         if (p >= 1) setMode('idle');
       }
@@ -196,6 +203,10 @@
         pose.sy *= 1 + 0.016 * c * S.rise;
         pose.yaw += 6 * sin(p * PI) * S.spin;
         pose.x += 3.6 * c * S.sway;          /* 侧身位：起手先侧让再出面 */
+        /* 施法的手：掐诀时手臂抬起（-16°）→ 送出时向前推出（+10°）→ 收回身侧 */
+        if (p < 0.62) pose.arm = -16 * kp * easeOut(p / 0.62);
+        else if (p < 0.78) pose.arm = lerp(-16 * kp, 10 * kp, easeOut((p - 0.62) / 0.16));
+        else pose.arm = lerp(10 * kp, 0, easeInOut((p - 0.78) / 0.22));
         fireRelease(p, 0.62);
         if (p >= 1) setMode('idle');
       }
@@ -241,6 +252,8 @@
         'perspective(420px) rotateY(' + pose.yaw.toFixed(2) + 'deg)';
       body.style.transform =
         'scale(' + pose.sx.toFixed(4) + ',' + pose.sy.toFixed(4) + ')';
+      /* 把手臂角度交给 CSS：手心法球与挥击弧光据此跟随手的位置 */
+      unitNode.style.setProperty('--arm', (pose.arm || 0).toFixed(2));
     }
 
     return {

@@ -1110,6 +1110,21 @@
         skillBurst(G.state.sect, (G.combat && G.combat.mobs) || [], slot);
         castPose(color, slot);
       };
+      /* 手心法球从"起手"就出现：贴在手上，随手臂抬起而抬高（见 --arm），
+         而不是等送出才凭空冒出来 —— 这样抬手蓄力的过程能看见。 */
+      if (ui.hero) {
+        const av = ui.hero.querySelector('.avatar');
+        const S = (global.FigureMotion && FigureMotion.STYLES && FigureMotion.STYLES[STYLE]) || null;
+        const dur = S ? S.dur : 0.7;
+        if (av) {
+          const orb = document.createElement('div');
+          orb.className = 'palm-orb';
+          orb.style.color = color;
+          orb.style.animationDuration = dur.toFixed(2) + 's';
+          av.appendChild(orb);
+          setTimeout(function () { orb.remove(); }, Math.round(dur * 1000) + 120);
+        }
+      }
       figCancel();                    /* 上一段没来得及触发的特效作废 */
       if (heroFig && heroFig.onRelease) heroFig.onRelease(fx);
       else fx();
