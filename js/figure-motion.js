@@ -172,7 +172,7 @@
         if (p < 0.3) {                       /* ① 蓄力：后撤、沉肩、体轴反拧 */
           const k = easeOut(p / 0.3) * kp;
           pose.x -= 4 * k * kd; pose.lean -= 4 * k; pose.yaw -= 7 * k;
-          pose.arm = -9 * k;                 /* 抬兵器：蓄力时先把手往后上方举 */
+          pose.arm = -11 * k;                /* 抬兵器：蓄力时先把手往后上方举 */
         } else if (p < 0.58) {               /* ② 发劲 → ③ 送出：前压刺出，重心的冲量最大 */
           const k = easeOut((p - 0.3) / 0.28);
           pose.x += lerp(-4 * kp * kd, 7 * kp * kd, k);
@@ -180,14 +180,14 @@
           pose.yaw += lerp(-7 * kp, 9 * kp, k);
           pose.y -= 2.2 * kp * sin(k * PI);
           pose.x += 3.0 * kp * S.sway;       /* 连斩：侧身换位 */
-          pose.arm = lerp(-8 * kp, 11 * kp, k);   /* 兵器劈下：手臂从后上甩到前下 */
+          pose.arm = lerp(-10 * kp, 14 * kp, k);  /* 兵器劈下：手臂从后上甩到前下 */
           fireRelease(p, 0.5);
         } else {                             /* ④ 收势：卸力回位 */
           const k = easeInOut((p - 0.58) / 0.42);
           pose.x += lerp(7 * kp * kd, 0, k);
           pose.lean += lerp(7 * kp, 0, k);
           pose.yaw += lerp(9 * kp, 0, k);
-          pose.arm = lerp(11 * kp, 0, k);    /* 手臂收回身侧 */
+          pose.arm = lerp(14 * kp, 0, k);    /* 手臂收回身侧 */
         }
         if (p >= 1) setMode('idle');
       }
@@ -204,9 +204,9 @@
         pose.yaw += 6 * sin(p * PI) * S.spin;
         pose.x += 3.6 * c * S.sway;          /* 侧身位：起手先侧让再出面 */
         /* 施法的手：掐诀时手臂抬起（-16°）→ 送出时向前推出（+10°）→ 收回身侧 */
-        if (p < 0.62) pose.arm = -11 * kp * easeOut(p / 0.62);
-        else if (p < 0.78) pose.arm = lerp(-11 * kp, 8 * kp, easeOut((p - 0.62) / 0.16));
-        else pose.arm = lerp(8 * kp, 0, easeInOut((p - 0.78) / 0.22));
+        if (p < 0.62) pose.arm = -14 * kp * easeOut(p / 0.62);
+        else if (p < 0.78) pose.arm = lerp(-14 * kp, 10 * kp, easeOut((p - 0.62) / 0.16));
+        else pose.arm = lerp(10 * kp, 0, easeInOut((p - 0.78) / 0.22));
         fireRelease(p, 0.62);
         if (p >= 1) setMode('idle');
       }
@@ -240,6 +240,18 @@
           pose.sx *= 1 + 0.05 * (1 - Math.abs(k - 0.25) * 2 > 0 ? (1 - Math.abs(k - 0.25) * 2) : 0);
         }
         if (p >= 1) setMode('idle');
+      }
+
+      /* —— 手一直在动 ——
+         上面每个动作只在"出手那一下"给 pose.arm 赋值，两次出手之间手是完全静止的，
+         看起来就像立绘贴上去没动。这里叠一层常驻摆臂：
+         待机缓慢起伏、走动时摆得更大更急，出手时只加一点颤动（不抢动作曲线）。
+         幅度上限参照拆层实测：手臂层超过约 ±16° 肩部会露出缺口，所以压在 8° 以内。 */
+      if (!pose.arm) {
+        const moving = mode === 'walk' || mode === 'run';
+        pose.arm = (moving ? 7.0 : 4.0) * sin(t * (moving ? 3.1 : 0.95));
+      } else {
+        pose.arm += 1.5 * sin(t * 2.3);
       }
 
       /* —— 写入各层（关节在该层原点上） —— */
