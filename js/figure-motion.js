@@ -43,6 +43,16 @@
     ult:    { dash: 0.60, rise: 2.20, spin: 2.4, power: 1.50, dur: 1.30 }
   };
 
+  /* 五个技能位各自的动作气质：与上表的「类型风格」相乘，
+     于是 5 类型 × 5 技能位 = 25 套不重样的施法身段，但底层仍是一条曲线。 */
+  const ACTIONS = [
+    { dash: 0.90, rise: 1.00, spin: 0.60, power: 1.00, sway: 0 },     /* s1 御剑术：单手前指，干脆 */
+    { dash: 1.25, rise: 0.80, spin: 1.20, power: 1.15, sway: 1 },     /* s2 破剑式：侧身连斩 */
+    { dash: 0.00, rise: 1.10, spin: 0.40, power: 0.90, sway: 0 },     /* s3 增益：结印抱圆，稳 */
+    { dash: 0.45, rise: 1.60, spin: 1.00, power: 1.20, sway: -1 },    /* s4 中技：双手高举召回 */
+    { dash: 0.70, rise: 2.40, spin: 2.60, power: 1.50, sway: 0 }      /* s5 绝技：腾空大转身 */
+  ];
+
   function easeOut(t) { return 1 - (1 - t) * (1 - t); }
   function easeInOut(t) { return t < 0.5 ? 2 * t * t : 1 - 2 * (1 - t) * (1 - t); }
 
@@ -92,8 +102,16 @@
     let mode = 'idle', lastMode = 'idle', modeT = 0, trans = 1;
     let t = Math.random() * 6;          /* 相位错开，多只单位不同步呼吸 */
     let gait = 0;
-    let style = 'melee', releaseCb = null, releaseFired = false;
-    function st() { return STYLES[style] || STYLES.melee; }
+    let style = 'melee', slot = 0, releaseCb = null, releaseFired = false;
+    /* 类型风格 × 技能位气质，合成这一击的实际幅度与节奏 */
+    function st() {
+      const b = STYLES[style] || STYLES.melee;
+      const a = ACTIONS[slot] || ACTIONS[0];
+      return {
+        dur: b.dur, dash: b.dash * a.dash, rise: b.rise * a.rise,
+        spin: b.spin * a.spin, power: b.power * a.power, sway: a.sway
+      };
+    }
     /* 「送出」那一瞬：特效与动作同拍 —— 关键帧只报一次 */
     function fireRelease(p, at) {
       if (releaseFired || p < at) return;
@@ -156,6 +174,7 @@
           pose.lean += lerp(-4 * kp, 7 * kp, k);
           pose.yaw += lerp(-7 * kp, 9 * kp, k);
           pose.y -= 2.2 * kp * sin(k * PI);
+          pose.x += 3.0 * kp * S.sway;       /* 连斩：侧身换位 */
           fireRelease(p, 0.5);
         } else {                             /* ④ 收势：卸力回位 */
           const k = easeInOut((p - 0.58) / 0.42);
@@ -176,6 +195,7 @@
         pose.lean -= 3.5 * c * kp;
         pose.sy *= 1 + 0.016 * c * S.rise;
         pose.yaw += 6 * sin(p * PI) * S.spin;
+        pose.x += 3.6 * c * S.sway;          /* 侧身位：起手先侧让再出面 */
         fireRelease(p, 0.62);
         if (p >= 1) setMode('idle');
       }
@@ -227,8 +247,9 @@
       setMode: setMode,
       update: update,
       /* 技能动作系统接口：设风格、挂「送出」回调、查关键帧状态 */
-      setStyle: function (s, mode2) {
+      setStyle: function (s, mode2, slot2) {
         if (STYLES[s]) style = s;
+        if (slot2 != null) slot = Math.max(0, Math.min(ACTIONS.length - 1, slot2 | 0));
         if (mode2) { setMode('idle'); setMode(mode2); }
       },
       onRelease: function (cb) { releaseCb = cb; releaseFired = false; },

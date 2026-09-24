@@ -380,9 +380,9 @@
   /* 立绘动作：可选传入技能风格（melee/ranged/aoe/buff/ult）。
      带风格时会「先归位再进入」，让同类型技能连发也能完整重播一遍动作，
      否则 setMode 的同模式早退会让第二次施法看起来没动。 */
-  function setFigPose(mode, style) {
+  function setFigPose(mode, style, slot) {
     if (!heroFig) return;
-    if (style && heroFig.setStyle) heroFig.setStyle(style, mode);
+    if (style && heroFig.setStyle) heroFig.setStyle(style, mode, slot);
     else heroFig.setMode(mode);
   }
   /* 打断：作废尚未触发的「送出」特效（受击/倒地时用） */
@@ -875,7 +875,7 @@
   }
 
   /* v6：门派群攻特效 —— 对每个命中目标按门派生成不同表现 */
-  function skillBurst(sectId, list) {
+  function skillBurst(sectId, list, slot) {
     if (!el.cast || !list || !list.length) return;
     const color = (G.sectOf(G.state.sect) || {}).color || '#5eead4';
     for (let i = 0; i < list.length; i++) {
@@ -917,11 +917,16 @@
         mk('sk-flame');
         burst('mob', '#fb923c', 14, m.idx);
       }
+      /* —— 技能位形态：同门派五个技能各打各的落点，观感不再千篇一律 ——
+         s1 直线剑光 · s2 交叉斩痕+溅血 · s3 上升光环 · s4 天降光柱 · s5 大爆炸 */
+      const F = ['sk-form-line', 'sk-form-cross', 'sk-form-halo', 'sk-form-fall', 'sk-form-burst'][slot || 0];
+      if (F) mk(F, { '--c': color }, slot === 4 ? 1200 : 880);
+      if (slot === 4) mk('sk-form-ring', { '--c': color }, 1100);
     }
   }
 
   /* v15：施法表现 —— 立绘无法单独动手，用「姿态 + 手心法球」表达施法动作 */
-  function castPose(color) {
+  function castPose(color, slot) {
     if (!ui.hero || !el.cast) return;
     const col = color || '#facc15';
     /* 姿态 */
@@ -946,6 +951,10 @@
     mk('cast-ring-layer l2', 800);
     mk('cast-pillar', 760);
     mk('cast-flash', 440);
+    /* 施法者脚下的表现也按技能位区分：增益走光环、绝技走冲天光柱 */
+    if (slot === 2) { mk('cast-halo', 900); }
+    if (slot === 3) { mk('cast-sigil', 900); }
+    if (slot === 4) { mk('cast-pillar tall', 1000); mk('cast-halo wide', 1000); }
     /* 手心法球与符纹（贴在角色身上，跟随 avatar 布局） */
     const palm = document.createElement('div');
     palm.className = 'palm-orb';
@@ -1094,16 +1103,18 @@
       burst('hero', color, 14);
       /* 动作与特效同拍：法阵/法球/群攻特效都等到「送出」那一瞬再出，
          而不是事件一到就砸出来 —— 先蓄力、后爆发的观感差别全在这里。 */
+      /* 技能位（s1..s5 → 0..4）：同一门派五个技能各有各的身段与特效形态 */
+      const slot = Math.max(0, Math.min(4, (parseInt(String((s && s.key) || 's1').slice(1), 10) || 1) - 1));
       const fx = function () {
         castFx('hero', s.name, color);
-        skillBurst(G.state.sect, (G.combat && G.combat.mobs) || []);
-        castPose(color);
+        skillBurst(G.state.sect, (G.combat && G.combat.mobs) || [], slot);
+        castPose(color, slot);
       };
       figCancel();                    /* 上一段没来得及触发的特效作废 */
       if (heroFig && heroFig.onRelease) heroFig.onRelease(fx);
       else fx();
       setHeroPose('cast');            /* v22：抬臂掐诀的骨骼动作 */
-      setFigPose('cast', STYLE);      /* v23：按技能类型演不同的施法动作 */
+      setFigPose('cast', STYLE, slot);/* v23：类型风格 × 技能位 = 各自的施法动作 */
     });
 
     G.on('exp', e => {
