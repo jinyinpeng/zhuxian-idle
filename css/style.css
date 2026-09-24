@@ -3512,8 +3512,11 @@ html[data-mode='day'] .shop-card { background: #ffffff; border-color: rgba(23, 3
 html[data-mode='day'] .shop-price { color: #0369a1; }
 
 /* 装备实物小图（行囊 / 已着装备 / 详情头部） */
-.itm { display: block; object-fit: contain; filter: drop-shadow(0 1px 1.5px rgba(0, 0, 0, .5)); }
-.bag-cell .itm { width: 32px; height: 32px; margin: 0 auto; }
-.eq-slot .itm { width: 30px; height: 30px; }
-.ic-icon .itm { width: 30px; height: 30px; }
+.itm { display: block; object-fit: contain;
+  filter: contrast(1.08) saturate(1.1) drop-shadow(0 1px 1.5px rgba(0, 0, 0, .55)); }
+/* 图标本身已在 tools/fit-item-art.py 里裁到实物外框并补成方图（细长的兵器转斜置），
+   所以这里的尺寸就是实物的实际视觉尺寸 —— 32px 时那把剑只有 6px 宽，像一根线。 */
+.bag-cell .itm { width: 40px; height: 40px; margin: 0 auto; }
+.eq-slot .itm { width: 36px; height: 36px; }
+.ic-icon .itm { width: 36px; height: 36px; }
 
