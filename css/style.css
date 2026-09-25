@@ -516,12 +516,22 @@ input { font-family: inherit; }
   position: absolute; left: 0; top: 0; width: 100%; height: 100%;
   object-fit: contain;
 }
+/* 举剑姿态用的两个可过渡变量：由界面在"举剑 / 收剑"时改一次值，
+   动作系统每帧写的 --arm/--army 不受影响，两者在下面直接相加。
+   注册 @property 是为了让它们能 transition（普通自定义属性不可插值），
+   不支持的浏览器只是少一段过渡动画，功能不受影响。 */
+@property --hold { syntax: '<number>'; inherits: true; initial-value: 0; }
+@property --hold-y { syntax: '<length>'; inherits: true; initial-value: 0px; }
+.unit.hero {
+  transition: --hold .18s ease-out, --hold-y .18s ease-out;
+}
 .fig-split .fig-arm {
   transform-origin: var(--ox, 50%) var(--oy, 26%);
   /* 先位移、后旋转：位移负责"整条手臂甩出去"，旋转负责"抬起来 / 放下去"。
      只做旋转时手腕弧长只有几像素，读起来只是袖子轻轻歪了一下；
      叠上位移（劈砍时向下 11px）才看得出是一次劈砍。 */
-  transform: translate(var(--armx, 0px), var(--army, 0px)) rotate(calc(var(--arm, 0) * 1deg));
+  transform: translate(var(--armx, 0px), calc(var(--army, 0px) + var(--hold-y, 0px)))
+             rotate(calc((var(--arm, 0) + var(--hold, 0)) * 1deg));
   will-change: transform;
 }
 /* 挥击弧光：沿手臂扫过的一道亮弧 —— 普攻"劈下去"最直接的读点 */
@@ -2432,6 +2442,58 @@ html.ui-busy .sheet, html.ui-busy .card, html.ui-busy .modal, html.ui-busy .pop 
   -webkit-overflow-scrolling: touch;
   will-change: scroll-position;
 }
+
+/* ---------- 举剑：技能前置条件的界面 ---------- */
+.raise-card {
+  border: 1px solid rgba(250, 204, 21, .28); border-radius: 12px; padding: 11px 12px;
+  background: linear-gradient(180deg, rgba(250, 204, 21, .07), rgba(250, 204, 21, .02));
+}
+.raise-card.on {
+  border-color: rgba(250, 204, 21, .7);
+  box-shadow: 0 0 0 1px rgba(250, 204, 21, .32), 0 0 18px -6px rgba(250, 204, 21, .7);
+}
+.raise-card.pulse { animation: raisePulse .6s ease-out 2; }
+.rc-head { font-size: 12.5px; letter-spacing: .08em; color: #facc15; display: flex; align-items: center; gap: 5px; }
+.rc-state { margin-top: 6px; font-size: 13px; }
+.rc-state b.on { color: #facc15; }
+.rc-state b.off { color: #fca5a5; }
+.rc-desc { margin-top: 6px; font-size: 11.5px; color: var(--s400); line-height: 1.62; }
+.rc-btns { margin-top: 9px; display: flex; gap: 7px; }
+@keyframes raisePulse {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-4px); }
+  75% { transform: translateX(4px); }
+}
+.skill-list { display: flex; flex-direction: column; gap: 6px; }
+.skill-row {
+  display: flex; align-items: center; gap: 8px; padding: 8px 10px;
+  border: 1px solid var(--line); border-radius: 10px;
+}
+.skill-row.need-raise { border-color: rgba(250, 204, 21, .3); }
+.skill-row.off { opacity: .62; }
+.sr-main { flex: 1; min-width: 0; }
+.sr-name { font-size: 13px; display: flex; align-items: center; gap: 6px; }
+.sr-tag {
+  font-size: 10px; padding: 1px 5px; border-radius: 999px;
+  border: 1px solid rgba(250, 204, 21, .5); color: #facc15;
+}
+.sr-desc { font-size: 11px; color: var(--s400); margin-top: 3px; }
+/* 释放失败：按钮抖一下，明确"这一下没生效" */
+.btn.deny { animation: denyShake .34s ease-out; }
+@keyframes denyShake {
+  0%, 100% { transform: translateX(0); }
+  20% { transform: translateX(-4px); }
+  50% { transform: translateX(4px); }
+  80% { transform: translateX(-2px); }
+}
+/* 举剑中：角色身上浮起一圈剑意光（与 .fig-split .fig-arm 的 --hold 同源） */
+.unit.hero.blade-up .avatar::after {
+  content: ''; position: absolute; left: 50%; bottom: 4px;
+  width: 64px; height: 98px; margin-left: -32px; pointer-events: none;
+  background: radial-gradient(ellipse at 50% 42%, rgba(250, 204, 21, .3), transparent 68%);
+  animation: holdGlow 1.1s ease-in-out infinite;
+}
+@keyframes holdGlow { 0%, 100% { opacity: .5; } 50% { opacity: 1; } }
 
 /* 滚动条 */
 .sheet-body::-webkit-scrollbar, .modal-body::-webkit-scrollbar, .create-inner::-webkit-scrollbar { width: 3px; }

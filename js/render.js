@@ -1155,6 +1155,17 @@
       }
     });
 
+    /* 举剑状态 → 手臂层的"持续抬起"姿态。
+       动作用的是 --hold/--hold-y（界面改一次值 + CSS 过渡），
+       与动作系统每帧写的 --arm/--army 相加 —— 所以举剑期间仍然能正常出招、走动。 */
+    G.on('raise', function (on) {
+      const h = ui.hero;
+      if (!h) return;
+      h.style.setProperty('--hold', on ? -17 : 0);
+      h.style.setProperty('--hold-y', on ? '-9px' : '0px');
+      h.classList.toggle('blade-up', !!on);
+    });
+
     G.on('skill', s => {
       const color = (G.sectOf(G.state.sect) || {}).color || '#facc15';
       /* 技能类型 → 动作风格：单体走远程御物、多段走范围法术、增益自成一格、绝技最张扬 */

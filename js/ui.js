@@ -418,7 +418,46 @@
     const totalPot = s.level - 1;
     const left = Math.max(0, totalPot - usedPot);
 
-    let body = '<div class="section-title">' + ic('user-plus', 'ic-xs') + ' 潜能 · 剩余 ' + left + ' 点</div>';
+    /* ---- 举剑：技能释放的前置条件 ----
+       把状态、按钮、规则说明放在面板最上面 —— 玩家第一眼看到的就是"举剑"。 */
+    const rUp = G.raiseOn();
+    const rLeft = G.raiseLeft();
+    let body = '<div class="raise-card' + (rUp ? ' on' : '') + '">' +
+      '<div class="rc-head">' + ic('sword', 'ic-xs') + ' 举剑 · 出招前置</div>' +
+      '<div class="rc-state">' + (rUp
+        ? '<b class="on">剑已举起</b> · 剩余 ' + rLeft.toFixed(1) + ' 秒 —— 可放【重击】【绝技】'
+        : '<b class="off">剑未举起</b> —— 放【重击】【绝技】前必须先举剑') + '</div>' +
+      '<div class="rc-desc">' + ic('info', 'ic-xs') +
+        ' 举剑是这两招的<b>前置条件</b>：剑未举起时点它们不会触发、也不扣内力，只给提示；' +
+        '成功放出一记后剑立即放下，需要重新举。轻招（普攻 / 突刺 / 群攻 / 增益）不受限制。</div>' +
+      '<div class="rc-btns">' +
+        '<button class="btn ' + (rUp ? 'sm' : 'gold') + '" data-act="raise">' +
+          ic('sword', 'ic-xs') + (rUp ? ' 重新计时（' + rLeft.toFixed(1) + 's）' : ' 举剑（持续 6 秒）') + '</button>' +
+        (rUp ? '<button class="btn sm" data-act="drop">收剑</button>' : '') +
+      '</div>' +
+      '</div>';
+
+    /* ---- 招式一览：可直接手动释放，缺条件的按钮会写明原因 ---- */
+    body += '<div class="section-title">' + ic('sword', 'ic-xs') + ' 招式</div><div class="skill-list">' +
+      D.SKILL_TEMPLATES.map((t, i) => {
+        const s2 = G.state;
+        const names = (G.sectOf(s2.sect) || {}).skillNames || [];
+        const nm = (names[i] || ['未知招式'])[0];
+        const ds = (names[i] || ['', ''])[1] || '';
+        const can = G.canUse(t.key);
+        const why = { raise: '需先举剑', lock: 'Lv.' + t.unlock + ' 解锁', mp: '内力不足', cd: '冷却中', nomob: '无目标' };
+        return '<div class="skill-row' + (t.raise ? ' need-raise' : '') + (can.ok ? '' : ' off') + '">' +
+          '<div class="sr-main">' +
+            '<div class="sr-name">' + esc(nm) +
+              (t.raise ? '<span class="sr-tag">需举剑</span>' : '') + '</div>' +
+            '<div class="sr-desc">' + esc(ds) + ' · 内力 ' + t.mp + ' · 冷却 ' + t.cd + 's</div>' +
+          '</div>' +
+          '<button class="btn ' + (can.ok ? 'gold sm' : 'sm') + '" data-act="castskill" data-key="' + t.key + '">' +
+            (can.ok ? '释放' : (why[can.why] || '暂不可用')) + '</button>' +
+          '</div>';
+      }).join('') + '</div>';
+
+    body += '<div class="section-title">' + ic('user-plus', 'ic-xs') + ' 潜能 · 剩余 ' + left + ' 点</div>';
     body += D.POTENTIAL.map(p =>
       '<div class="pot-item">' +
         '<span class="p-ic" style="color:' + p.color + '">' + ic(p.key === 'power' ? 'flame' : p.key === 'bone' ? 'shield' : p.key === 'insight' ? 'sun' : 'zap') + '</span>' +
@@ -629,6 +668,38 @@
   function handleAct(act, node) {
     const s = G.state;
     switch (act) {
+      /* ---- 举剑系统：举剑 / 收剑 / 手动释放 ---- */
+      case 'raise': {
+        G.raiseSword();
+        R.toast('举剑！六秒内可放【重击】【绝技】', 'gold');
+        renderSheet('skill', true);
+        break;
+      }
+      case 'drop': {
+        G.dropSword();
+        renderSheet('skill', true);
+        break;
+      }
+      case 'castskill': {
+        const key = node.getAttribute('data-key');
+        const r = G.useSkillManual(key);
+        if (r.ok) { renderSheet('skill', true); renderTop(); break; }
+        /* 释放失败：把人话讲清楚，并把视线引到举剑按钮上 */
+        const why = {
+          raise: '需先举剑：点上方「举剑」后再放此招',
+          mp: '内力不足，先歇一会儿',
+          cd: '此招尚在冷却',
+          lock: '等级不足，尚未解锁',
+          nomob: '眼前没有目标'
+        }[r.why] || '暂时无法释放';
+        R.toast(why, 'bad');
+        node.classList.remove('deny'); void node.offsetWidth; node.classList.add('deny');
+        if (r.why === 'raise') {
+          const rc = document.querySelector('.raise-card');
+          if (rc) { rc.classList.remove('pulse'); void rc.offsetWidth; rc.classList.add('pulse'); }
+        }
+        break;
+      }
       case 'bagtab': UI.tab.bag = node.getAttribute('data-v'); renderSheet('bag'); break;
       case 'buy': {
         const r = G.buyShop(node.getAttribute('data-v'));

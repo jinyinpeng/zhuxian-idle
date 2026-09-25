@@ -317,17 +317,64 @@
     return dmg;
   }
 
+  /* ============================ 举剑状态机 ============================
+     有些招（重击 s2 / 绝技 s5）必须先"举剑"蓄势，才允许释放：
+       · raiseSword() 举剑，持续 RAISE_DUR 秒；到点自动放下（dropSword）；
+       · 剑未举起时调 useSkill → 不扣内力、不触发，只记录失败原因 C.lastFail='raise'，
+         交给界面弹提示（这样"放不出来"和"内力不够"能区分开）；
+       · 成功放出一记举剑招后立刻放剑 —— 于是形成「举剑 → 出招 → 收剑」的节奏。 */
+  const RAISE_DUR = 6.0;
+  function raiseOn() { return !!(G.raise && G.raise.t > 0); }
+  function raiseSword() {
+    if (!G.raise) G.raise = { on: false, t: 0, dur: RAISE_DUR };
+    if (!G.raise.on) {
+      G.raise.on = true;
+      log('举剑蓄势 —— 六秒内可出重手', 'buff');
+      emit('raise', true);
+    }
+    G.raise.t = RAISE_DUR;
+    return true;
+  }
+  function dropSword(silent) {
+    if (!G.raise || !G.raise.on) return;
+    G.raise.on = false; G.raise.t = 0;
+    emit('raise', false);
+    if (!silent) log('剑已放下', 'info');
+  }
+  function raiseLeft() { return raiseOn() ? G.raise.t : 0; }
+  function skillNeedRaise(key) {
+    const t = D.SKILL_TEMPLATES.find(s => s.key === key);
+    return !!(t && t.raise);
+  }
+  /* 能否释放：返回 {ok, why} —— why 用于界面提示 */
+  function canUse(key) {
+    const t = D.SKILL_TEMPLATES.find(s => s.key === key);
+    if (!t) return { ok: false, why: 'none' };
+    if (!skillUnlocked(key)) return { ok: false, why: 'lock' };
+    const slv = G.skills[key] || 1;
+    const st = stats();
+    if (G.mp * st.maxMp < t.mp * (1 + (slv - 1) * 0.08)) return { ok: false, why: 'mp' };
+    if (t.raise && !raiseOn()) return { ok: false, why: 'raise' };
+    if (C.cds[key] > 0) return { ok: false, why: 'cd' };
+    return { ok: true, why: '' };
+  }
+
   function useSkill(key) {
     const t = D.SKILL_TEMPLATES.find(s => s.key === key);
-    if (!t) return;
+    if (!t) return false;
+    C.lastFail = '';
+    /* 前置条件先判：举剑未完成 → 直接失败，不消耗内力 */
+    if (t.raise && !raiseOn()) { C.lastFail = 'raise'; return false; }
     const slv = G.skills[key] || 1;
     const st = stats();
     const mpCost = t.mp * (1 + (slv - 1) * 0.08);
-    if (G.mp * st.maxMp < mpCost) return false;
-    if (!C.mob) return false;
+    if (G.mp * st.maxMp < mpCost) { C.lastFail = 'mp'; return false; }
+    if (!C.mob) { C.lastFail = 'nomob'; return false; }
     G.mp = clamp(G.mp - mpCost / st.maxMp, 0, 1);
 
     const name = sectOf(G.sect).skillNames[D.SKILL_TEMPLATES.indexOf(t)][0];
+    /* 举剑招放出去 → 剑随之放下：状态**用掉即清空**，下次还得重新举 */
+    if (t.raise) dropSword(true);
     emit('skill', { key: key, name: name, type: t.type });
 
     if (t.type === 'buff') {
@@ -887,6 +934,12 @@
     // buff
     if (C.buff.t > 0) C.buff.t -= dt;
 
+    // 举剑：到时自动放下（举剑是有时限的蓄势，不是永久开关）
+    if (G.raise && G.raise.on) {
+      G.raise.t -= dt;
+      if (G.raise.t <= 0) dropSword();
+    }
+
     if (!G.auto) {
       socialTimer(dt);
       return;
@@ -972,6 +1025,11 @@
             if (C.mobs[qi].hp <= 0) { killOne(C.mobs[qi]); killedAny = true; }
           }
           if (killedAny) break;
+        } else if (C.lastFail === 'raise') {
+          /* 自动挂机也需要"先举剑"：这一拍只举剑，下一拍（0.5s 后）才出招，
+             于是挂机画面里也能看到抬剑蓄势 → 劈下的完整节奏。 */
+          raiseSword();
+          C.cds[k] = 0.5;
         } else if (G.mp * st.maxMp < 12) {
           C.cds[k] = 0.6;
         } else {
@@ -1186,6 +1244,22 @@
     get combat() { return C; },
     get arena() { return C; },
     get hasSave() { return !!load(); }
+  };
+
+  /* ---- 举剑系统对外接口（界面拿它做按钮、状态提示与失败反馈） ---- */
+  Game.RAISE_DUR = RAISE_DUR;
+  Game.raiseSword = raiseSword;
+  Game.dropSword = dropSword;
+  Game.raiseOn = raiseOn;
+  Game.raiseLeft = raiseLeft;
+  Game.skillNeedRaise = skillNeedRaise;
+  Game.canUse = canUse;
+  /* 手动释放：返回 { ok, why } —— why 用于界面给出"为什么放不出来" */
+  Game.useSkillManual = function (key) {
+    const r = canUse(key);
+    if (!r.ok) return r;
+    const fired = useSkill(key);
+    return { ok: !!fired, why: fired ? '' : (C.lastFail || 'fail') };
   };
 
   global.Game = Game;

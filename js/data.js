@@ -124,12 +124,15 @@
   ];
 
   /* ---------------------------------------------------------- 技能模板 */
+  /* raise: true = 该招式必须**先举剑**才能释放（见 core.js 的举剑状态机）。
+     只给 s2 重击与 s5 绝技这两记"重手"加前置：轻招仍可随手打出，
+     否则每个技能都要先举剑，挂机节奏会被拖垮。 */
   const SKILL_TEMPLATES = [
     { key: 's1', unlock: 1, cd: 5.0, mp: 8, type: 'single', ratio: 3.0, hits: 1 },
-    { key: 's2', unlock: 8, cd: 9.0, mp: 14, type: 'single', ratio: 5.2, hits: 1, burn: { ratio: 0.45, dur: 4 } },
+    { key: 's2', unlock: 8, cd: 9.0, mp: 14, type: 'single', ratio: 5.2, hits: 1, burn: { ratio: 0.45, dur: 4 }, raise: true },
     { key: 's3', unlock: 18, cd: 18.0, mp: 20, type: 'buff', ratio: 0, hits: 0, buff: { atkPct: 0.35, dur: 10 } },
     { key: 's4', unlock: 34, cd: 13.0, mp: 26, type: 'aoe', ratio: 2.4, hits: 3 },
-    { key: 's5', unlock: 55, cd: 26.0, mp: 42, type: 'ult', ratio: 9.5, hits: 1, heal: 0.16 }
+    { key: 's5', unlock: 55, cd: 26.0, mp: 42, type: 'ult', ratio: 9.5, hits: 1, heal: 0.16, raise: true }
   ];
 
   /* --------------------------------------------------------- 潜能加点 */
