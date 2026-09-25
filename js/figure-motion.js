@@ -134,6 +134,10 @@
       if (!figLive.isConnected) return;  /* 单位被移除后自动停止 */
       modeT += dt; t += dt;
       if (trans < 1) trans = Math.min(1, trans + dt / 0.2);
+      /* 手臂层的位移（--armx/--army）：只靠旋转看不出"劈下"——
+         绕肩旋转 14° 时手腕只有 7px 弧长，读起来只是袖子轻轻歪了一下。
+         所以出手时给手臂层再叠一段位移，让它整个甩出去。 */
+      let ax = 0, ay = 0;
 
       blend(POSES[lastMode], POSES[mode], easeInOut(trans), pose);
 
@@ -172,7 +176,8 @@
         if (p < 0.3) {                       /* ① 蓄力：后撤、沉肩、体轴反拧 */
           const k = easeOut(p / 0.3) * kp;
           pose.x -= 4 * k * kd; pose.lean -= 4 * k; pose.yaw -= 7 * k;
-          pose.arm = -11 * k;                /* 抬兵器：蓄力时先把手往后上方举 */
+          pose.arm = -12 * k;                /* 抬兵器：把手往**后上方**举起来 */
+          ax = -3 * k; ay = -7 * k;          /* 手臂整体上抬后撤 */
         } else if (p < 0.58) {               /* ② 发劲 → ③ 送出：前压刺出，重心的冲量最大 */
           const k = easeOut((p - 0.3) / 0.28);
           pose.x += lerp(-4 * kp * kd, 7 * kp * kd, k);
@@ -180,14 +185,18 @@
           pose.yaw += lerp(-7 * kp, 9 * kp, k);
           pose.y -= 2.2 * kp * sin(k * PI);
           pose.x += 3.0 * kp * S.sway;       /* 连斩：侧身换位 */
-          pose.arm = lerp(-10 * kp, 14 * kp, k);  /* 兵器劈下：手臂从后上甩到前下 */
+          pose.arm = lerp(-12 * kp, 16 * kp, k);  /* 兵器劈下：手臂从后上甩到前下 */
+          ax = lerp(-3 * kp, 8 * kp, k);     /* 同时向前 */
+          ay = lerp(-7 * kp, 11 * kp, k);    /* 并狠狠向下 —— 这才是"劈" */
           fireRelease(p, 0.5);
         } else {                             /* ④ 收势：卸力回位 */
           const k = easeInOut((p - 0.58) / 0.42);
           pose.x += lerp(7 * kp * kd, 0, k);
           pose.lean += lerp(7 * kp, 0, k);
           pose.yaw += lerp(9 * kp, 0, k);
-          pose.arm = lerp(14 * kp, 0, k);    /* 手臂收回身侧 */
+          pose.arm = lerp(16 * kp, 0, k);    /* 手臂收回身侧 */
+          ax = lerp(8 * kp, 0, k);
+          ay = lerp(11 * kp, 0, k);
         }
         if (p >= 1) setMode('idle');
       }
@@ -204,9 +213,18 @@
         pose.yaw += 6 * sin(p * PI) * S.spin;
         pose.x += 3.6 * c * S.sway;          /* 侧身位：起手先侧让再出面 */
         /* 施法的手：掐诀时手臂抬起（-16°）→ 送出时向前推出（+10°）→ 收回身侧 */
-        if (p < 0.62) pose.arm = -14 * kp * easeOut(p / 0.62);
-        else if (p < 0.78) pose.arm = lerp(-14 * kp, 10 * kp, easeOut((p - 0.62) / 0.16));
-        else pose.arm = lerp(10 * kp, 0, easeInOut((p - 0.78) / 0.22));
+        if (p < 0.62) {
+          const k = easeOut(p / 0.62);
+          pose.arm = -14 * kp * k; ax = -2 * kp * k; ay = -8 * kp * k;   /* 抬手：往上抬起来 */
+        } else if (p < 0.78) {
+          const k = easeOut((p - 0.62) / 0.16);
+          pose.arm = lerp(-14 * kp, 10 * kp, k);
+          ax = lerp(-2 * kp, 6 * kp, k);
+          ay = lerp(-8 * kp, 4 * kp, k);                                  /* 送出：向前推出去 */
+        } else {
+          const k = easeInOut((p - 0.78) / 0.22);
+          pose.arm = lerp(10 * kp, 0, k); ax = lerp(6 * kp, 0, k); ay = lerp(4 * kp, 0, k);
+        }
         fireRelease(p, 0.62);
         if (p >= 1) setMode('idle');
       }
@@ -264,8 +282,10 @@
         'perspective(420px) rotateY(' + pose.yaw.toFixed(2) + 'deg)';
       body.style.transform =
         'scale(' + pose.sx.toFixed(4) + ',' + pose.sy.toFixed(4) + ')';
-      /* 把手臂角度交给 CSS：手心法球与挥击弧光据此跟随手的位置 */
+      /* 把手臂姿态交给 CSS：手心法球与挥击弧光据此跟随手的位置 */
       unitNode.style.setProperty('--arm', (pose.arm || 0).toFixed(2));
+      unitNode.style.setProperty('--armx', ax.toFixed(2) + 'px');
+      unitNode.style.setProperty('--army', ay.toFixed(2) + 'px');
     }
 
     return {

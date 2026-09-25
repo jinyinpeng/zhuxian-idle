@@ -888,6 +888,20 @@
     fenxiang: { shape: 'sk-flame', tint: '#fb923c', extra: 'sk-form-line', glyph: '焚' }
   };
 
+  /* 普攻的挥击弧光：贴在角色身上扫过一道亮弧，配合手臂层的位移与旋转，
+     把"劈下去"这个动作读出来（只靠手臂层旋转，手机上几乎看不出）。 */
+  function swingArc() {
+    if (!el.cast) return;
+    const p = unitPos('hero');
+    const d = document.createElement('div');
+    d.className = 'swing-arc';
+    d.style.left = p.x + 'px';
+    d.style.top = (p.y - 30) + 'px';
+    d.style.color = (G.sectOf(G.state.sect) || {}).color || '#facc15';
+    el.cast.appendChild(d);
+    setTimeout(function () { d.remove(); }, 460);
+  }
+
   function skillBurst(sectId, list, slot) {
     if (!el.cast || !list || !list.length) return;
     const M = FX_MOTIF[sectId] || FX_MOTIF.qingyun;
@@ -1118,6 +1132,7 @@
       if (d.side === 'mob') {
         const node = mobNode(mi);
         if (d.skill) slash('mob', mi);
+        else swingArc();                     /* 普攻：给一记挥击弧光 */
         burst('mob', d.crit ? '#fde047' : '#fca5a5', d.crit ? 20 : 11, mi);
         hitFlash(node);
         setMobPose(mi, 'hurt');              /* v22：怪物受击骨骼动作 */

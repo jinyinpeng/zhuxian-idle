@@ -518,8 +518,25 @@ input { font-family: inherit; }
 }
 .fig-split .fig-arm {
   transform-origin: var(--ox, 50%) var(--oy, 26%);
-  transform: rotate(calc(var(--arm, 0) * 1deg));
+  /* 先位移、后旋转：位移负责"整条手臂甩出去"，旋转负责"抬起来 / 放下去"。
+     只做旋转时手腕弧长只有几像素，读起来只是袖子轻轻歪了一下；
+     叠上位移（劈砍时向下 11px）才看得出是一次劈砍。 */
+  transform: translate(var(--armx, 0px), var(--army, 0px)) rotate(calc(var(--arm, 0) * 1deg));
   will-change: transform;
+}
+/* 挥击弧光：沿手臂扫过的一道亮弧 —— 普攻"劈下去"最直接的读点 */
+.swing-arc {
+  position: absolute; pointer-events: none;
+  width: 86px; height: 86px; margin: -43px 0 0 -43px;
+  border-radius: 50%; border: 3px solid transparent;
+  border-top-color: currentColor; border-right-color: currentColor;
+  filter: blur(.4px) drop-shadow(0 0 10px currentColor);
+  animation: swingArc .42s ease-out forwards;
+}
+@keyframes swingArc {
+  0%   { transform: rotate(-54deg) scale(.55); opacity: 0; }
+  22%  { opacity: .95; }
+  100% { transform: rotate(48deg) scale(1.15); opacity: 0; }
 }
 /* 脚下灵光 */
 .avatar::before {
