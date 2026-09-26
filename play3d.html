@@ -112,11 +112,14 @@
 <!-- three.js 已本地化到 assets/three/（只保留实际用到的 13 个文件，合计 0.83MB），
      彻底不再依赖 unpkg CDN —— 3D 页因此断网也能打开。
      升级 three 的做法：npm i three@版本 → 重新跑本地化脚本拷贝。
-     注意：importmap 里必须是纯 JSON，不能写注释。 -->
+     注意：importmap 里必须是纯 JSON，不能写注释。
+     坑（务必保留 "./" 前缀）：importmap 的「值」必须是绝对 URL，或以 / ./ ../ 开头；
+     写成 "assets/..." 会被浏览器当成「裸说明符」整条忽略（控制台警告 Bare specifier + 模块解析失败），
+     结果是整个 <script type="module"> 不执行、加载页永远停在「正在构筑洞天…」。 -->
 <script type="importmap">
 { "imports": {
-    "three": "assets/three/three.module.min.js",
-    "three/addons/": "assets/three/addons/"
+    "three": "./assets/three/three.module.min.js",
+    "three/addons/": "./assets/three/addons/"
 } }
 </script>
 </head>
@@ -1104,7 +1107,9 @@ function hud(dt) {
   const s = G.state, st = G.stats();
   el('hpBar').style.transform = 'scaleX(' + Math.max(0, s.hp).toFixed(3) + ')';
   el('mpBar').style.transform = 'scaleX(' + Math.max(0, s.mp).toFixed(3) + ')';
-  el('hpTxt').textContent = Math.round(s.hp * st.maxHp) + ' / ' + Math.round(st.maxHp);
+  /* 注意：G.stats() 里气血上限字段名是 hp（不是 maxHp），内力才是 maxMp；
+     s.hp / s.mp 是 0~1 的比例，乘上限才是数值。写错会显示成 NaN/NaN。 */
+  el('hpTxt').textContent = Math.round(s.hp * st.hp) + ' / ' + Math.round(st.hp);
   el('mpTxt').textContent = Math.round(s.mp * st.maxMp) + ' / ' + Math.round(st.maxMp);
   el('bLv').textContent = 'Lv.' + s.level + ' · ' + (SECT.name || '');
   el('bName').textContent = (s.name || '散修') + ' · ' + SECT.name;
@@ -1428,7 +1433,13 @@ function loop(now) {
 function resize() {
   const w = innerWidth, h = innerHeight;
   camera.aspect = w / h;
-  camera.fov = w / h < 1 ? 56 : 46;
+  /* 竖屏的横向视野会被 aspect 压窄：主角站在 x=+2.6、妖物在左侧，
+     窄屏（如 390×844，a≈0.46）上主角会被切在右缘、妖物也看到不。
+     这里按「需要横向半宽 ≈ 4.6 世界单位 / 相机距离 ≈ 13.2」反推竖直 FOV：
+     a≥1（横屏/方屏）仍是 46°；越窄越开到最大 76°（再大就有鱼眼畸变）。 */
+  const a = w / h;
+  const need = 2 * Math.atan((5.0 / 13.2) / Math.max(0.25, a)) * 180 / Math.PI;
+  camera.fov = Math.max(46, Math.min(80, need));
   camera.updateProjectionMatrix();
   renderer.setSize(w, h, false);
   if (composer) composer.setSize(w, h);
