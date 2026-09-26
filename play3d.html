@@ -216,8 +216,9 @@ const hemi = new THREE.HemisphereLight(0x9ec9ff, 0x2b2c22, 0.62);
 scene.add(hemi);
 const sun = new THREE.DirectionalLight(0xffe6bd, 2.2);
 sun.position.set(-9, 15, 8); sun.castShadow = true;
-/* 阴影条纹（acne）：靠 normalBias 消除，而不是靠调大 bias —— 后者会让阴影脱脚 */
-sun.shadow.normalBias = 0.075; sun.shadow.bias = -0.0004;
+/* 阴影条纹（acne）：平面地面用很小的正 bias + 极小的 normalBias 就够；
+   bias 调大反而会让阴影脱脚（peter-panning） */
+sun.shadow.normalBias = 0.02; sun.shadow.bias = 0.0005;
 scene.add(sun);
 const rim = new THREE.DirectionalLight(0x6fd8ff, 0.9);
 rim.position.set(8, 5, -12); scene.add(rim);
@@ -225,13 +226,17 @@ const master = new THREE.PointLight(0xffffff, 0, 30, 2);
 master.position.set(0, 2.6, 0.4); scene.add(master);
 
 /* ---------- 4. 地面 / 石台 / 装饰（InstancedMesh：几十个物件只占 2 次绘制） ---------- */
-const ground = new THREE.Mesh(new THREE.CircleGeometry(52, 64),
+/* 地面用平面而不是大圆盘：CircleGeometry 是从圆心发散的三角扇，
+   在几十米尺度上做阴影接收会出现放射状接缝（实测很明显）。平面只有 2 个三角形，没有这个问题。 */
+const ground = new THREE.Mesh(new THREE.PlaneGeometry(150, 150),
   new THREE.MeshStandardMaterial({ map: groundTex, color: 0x8f9e88, roughness: 0.95, metalness: 0.02 }));
 ground.rotation.x = -Math.PI / 2; ground.receiveShadow = true; scene.add(ground);
 
 const discMat = new THREE.MeshStandardMaterial({ map: rockTex, color: 0xa7aeb6, roughness: 0.76, metalness: 0.08 });
 const disc = new THREE.Mesh(new THREE.CylinderGeometry(9.6, 10.4, 0.5, 64), discMat);
-disc.position.y = -0.25; disc.receiveShadow = true; disc.castShadow = tier >= 1; scene.add(disc);
+/* 石台不投影：它是个 64 面的圆柱，紧贴地面，每一条侧面都会在地面上拉出一道
+   放射状阴影 —— 之前地面上那些"放射纹"就是它造成的，不是阴影参数问题。 */
+disc.position.y = -0.25; disc.receiveShadow = true; disc.castShadow = false; scene.add(disc);
 const ringEdge = new THREE.Mesh(new THREE.TorusGeometry(9.7, 0.13, 10, 96),
   new THREE.MeshStandardMaterial({ color: COL, emissive: COL, emissiveIntensity: 1.6, roughness: 0.35 }));
 ringEdge.rotation.x = Math.PI / 2; ringEdge.position.y = 0.02; scene.add(ringEdge);
@@ -328,7 +333,11 @@ function buildFallbackHero() {
 heroFallback = buildFallbackHero();
 heroRoot.add(heroFallback);
 
-let mobTpl = null, mobTplReady = false;
+/* 三种妖物各自的 GLB 模板（压缩后每个约 4MB，可放心全上）。
+   取不到的那一种自动回退到程序化形体，绝不会开天窗。 */
+const mobTpls = { beast: null, demon: null, ghost: null };
+const MOB_H = { beast: 2.15, demon: 2.6, ghost: 2.5 };
+const MOB_SCALE = { beast: 0.66, demon: 0.7, ghost: 0.72 };
 const mobMeshes = new Map();
 const mobColors = { beast: 0x6b4a2e, demon: 0x6d2545, ghost: 0x9fd8d0 };
 /* 三种妖物的形体（程序化搭建，但按"生物结构"搭，而不是一根胶囊）：
@@ -435,15 +444,7 @@ function buildGhost() {
 }
 function buildFallbackMob(kind) {
   const g = kind === 'demon' ? buildDemon() : kind === 'ghost' ? buildGhost() : buildBeast();
-  /* 落地接触影：一张贴地的暗斑，比实时阴影便宜得多，也让怪物"压在地上" */
-  const sh = new THREE.Mesh(new THREE.CircleGeometry(0.95, 20),
-    new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.42,
-      depthWrite: false, blending: THREE.NormalBlending }));
-  sh.rotation.x = -Math.PI / 2; sh.position.y = 0.03;
-  sh.scale.set(1.15, 0.75, 1);
-  g.add(sh);
-  g.userData.shadowBlob = sh;
-  return g;
+  return g;   /* 落地影由 makeMob 统一挂（模型与程序化形体都要有，且不能重复） */
 }
 
 /* GLB 后台加载：加载完再换上去，绝不阻塞首屏（模型 30MB，中端机上要慢慢来） */
@@ -464,9 +465,11 @@ loadGLB('assets/models/hero_cultivator.glb?v=' + (window.__VER || ''), scene2 =>
   el('lsub').textContent = '主角模型已载入';
   setTimeout(() => { el('lsub').textContent = ''; }, 1600);
 });
-loadGLB('assets/models/beast.glb', scene2 => {
-  standardize(scene2, 2.15);
-  mobTpl = scene2; mobTplReady = true;      /* 之后新出场的岩甲兽直接用模型 */
+['beast', 'demon', 'ghost'].forEach(k => {
+  loadGLB('assets/models/' + k + '.glb', scene2 => {
+    standardize(scene2, MOB_H[k]);
+    mobTpls[k] = scene2;                 /* 之后该种妖物出场就用模型 */
+  });
 });
 
 /* ---------- 6. 粒子 / 冲击波 ---------- */
@@ -585,9 +588,9 @@ function mobAnchor(idx) {
 function makeMob(kind) {
   const gr = new THREE.Group();
   let inner;
-  if (kind === 'beast' && mobTplReady) {
-    inner = mobTpl.clone(true);
-    inner.scale.multiplyScalar(0.66);
+  if (mobTpls[kind]) {
+    inner = mobTpls[kind].clone(true);
+    inner.scale.multiplyScalar(MOB_SCALE[kind] || 0.7);
   } else {
     inner = buildFallbackMob(kind);
   }
