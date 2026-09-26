@@ -1044,6 +1044,11 @@
         '</div>' +
         '<div class="section-title" style="margin-top:16px">画面</div>' +
         '<div class="set-row">' +
+          '<div class="s-main"><div class="s-name">3D 试炼场</div>' +
+          '<div class="s-desc">实时 3D 战斗场景（动态光影 / 粒子 / 自由相机），独立入口</div></div>' +
+          '<button class="btn sm gold" onclick="location.href=\'play3d.html\'">进入</button>' +
+        '</div>' +
+        '<div class="set-row">' +
           '<div class="s-main"><div class="s-name">游戏音乐</div><div class="s-desc">仙侠背景音乐 · 可一键开关</div></div>' +
           '<div class="switch' + (G.state.settings.music !== false ? ' on' : '') + '" data-music="1"></div>' +
         '</div>' +

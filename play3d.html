@@ -1,0 +1,659 @@
+<!doctype html>
+<html lang="zh-CN" data-mode="night">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>诛仙问道 · 3D 试炼场</title>
+<style>
+  :root { --gold:#facc15; }
+  * { box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  html,body { margin:0; height:100%; overflow:hidden; background:#07090d;
+    font:13px/1.5 system-ui,-apple-system,"PingFang SC","Microsoft YaHei",sans-serif; color:#e7e5e4; }
+  #stage { position:fixed; inset:0; display:block; touch-action:none; }
+  .hud { position:fixed; left:0; right:0; z-index:5; pointer-events:none; }
+  #top { top:0; padding:calc(8px + env(safe-area-inset-top)) 12px 0; }
+  .row { display:flex; align-items:center; gap:8px; }
+  .badge { font-size:11px; padding:2px 8px; border-radius:999px; background:rgba(10,14,20,.62);
+    border:1px solid rgba(250,204,21,.35); color:var(--gold); letter-spacing:.08em; }
+  .bar { position:relative; height:9px; border-radius:999px; overflow:hidden;
+    background:rgba(8,12,18,.72); border:1px solid rgba(255,255,255,.14); flex:1; }
+  .bar > i { position:absolute; inset:0; width:100%; transform-origin:left center; transition:transform .18s linear; }
+  .bar.hp > i { background:linear-gradient(90deg,#f87171,#ef4444); }
+  .bar.mp > i { background:linear-gradient(90deg,#38bdf8,#0ea5e9); }
+  .bar em { position:absolute; inset:0; text-align:center; font:10px/9px system-ui; font-style:normal;
+    color:#fff; text-shadow:0 1px 2px #000; }
+  .barwrap { width:min(42vw,240px); }
+  #bottom { bottom:0; padding:0 12px calc(10px + env(safe-area-inset-bottom)); display:flex;
+    justify-content:space-between; align-items:flex-end; gap:10px; }
+  .panel { pointer-events:auto; background:rgba(10,14,20,.6); border:1px solid rgba(255,255,255,.13);
+    border-radius:12px; padding:8px 10px; backdrop-filter:blur(6px); }
+  #log { width:min(46vw,300px); max-height:104px; overflow:hidden; font-size:11.5px; color:#d6d3d1; }
+  #log b { color:var(--gold); font-weight:600; }
+  #log .hit { color:#fca5a5; }  #log .sk { color:#7dd3fc; }
+  #toast { position:fixed; left:50%; top:34%; transform:translate(-50%,-50%) scale(.9); z-index:6;
+    font:700 22px/1.3 system-ui; color:var(--gold); text-shadow:0 2px 14px rgba(250,204,21,.55),0 2px 4px #000;
+    opacity:0; transition:opacity .18s,transform .18s; pointer-events:none; white-space:nowrap; }
+  #toast.on { opacity:1; transform:translate(-50%,-50%) scale(1); }
+  .btn { pointer-events:auto; border:1px solid rgba(255,255,255,.16); background:rgba(10,14,20,.6);
+    color:#e7e5e4; border-radius:10px; padding:7px 11px; font-size:12px; }
+  .btn.gold { border-color:rgba(250,204,21,.5); color:var(--gold); }
+  #fps { position:fixed; right:10px; top:calc(46px + env(safe-area-inset-top)); z-index:6;
+    font:11px/1.4 ui-monospace,monospace; color:#a8a29e; text-align:right; }
+  #hint { position:fixed; left:50%; bottom:calc(74px + env(safe-area-inset-bottom)); transform:translateX(-50%);
+    z-index:5; font-size:11px; color:#a8a29e; background:rgba(10,14,20,.5); padding:4px 10px; border-radius:999px;
+    transition:opacity .4s; }
+  #loading { position:fixed; inset:0; z-index:9; display:flex; align-items:center; justify-content:center;
+    flex-direction:column; gap:14px; background:#07090d; transition:opacity .5s; }
+  #loading.done { opacity:0; pointer-events:none; }
+  .ring { width:44px; height:44px; border-radius:50%; border:3px solid rgba(250,204,21,.2);
+    border-top-color:var(--gold); animation:spin 1s linear infinite; }
+  @keyframes spin { to { transform:rotate(360deg); } }
+</style>
+<script type="importmap">
+{ "imports": {
+    "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+    "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+} }
+</script>
+</head>
+<body>
+<canvas id="stage"></canvas>
+
+<div class="hud" id="top">
+  <div class="row" style="margin-bottom:6px">
+    <span class="badge">3D 试炼场</span>
+    <span class="badge" id="sectName">门派</span>
+    <span class="badge" id="lvName">Lv.1</span>
+    <span style="flex:1"></span>
+    <button class="btn" id="quality">画质 高</button>
+  </div>
+  <div class="row" style="margin-bottom:5px">
+    <span style="font-size:11px;color:#a8a29e;width:22px">气血</span>
+    <div class="barwrap"><div class="bar hp"><i id="hpBar"></i><em id="hpTxt"></em></div></div>
+    <span style="font-size:11px;color:#a8a29e;width:22px;text-align:right">元神</span>
+    <div class="barwrap"><div class="bar mp"><i id="mpBar"></i><em id="mpTxt"></em></div></div>
+  </div>
+</div>
+
+<div id="fps"></div>
+<div id="hint">拖动旋转视角 · 滚轮／双指缩放 · 点击「开战」自动挂机</div>
+<div id="toast"></div>
+
+<div class="hud" id="bottom">
+  <div class="panel" id="log"></div>
+  <div style="display:flex;gap:8px;align-items:flex-end">
+    <button class="btn" id="back2d">2D 版</button>
+    <button class="btn gold" id="fight">开战</button>
+  </div>
+</div>
+
+<div id="loading"><div class="ring"></div><div style="color:#a8a29e;font-size:12px" id="ltxt">正在构筑洞天…</div></div>
+
+<script src="js/data.js"></script>
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+/* ============================================================================
+   3D 试炼场 —— 与 2D 版共用同一套数值表（js/data.js 的 window.D），
+   战斗规则按同一套公式在本地推进；表现全部由 Three.js 实时渲染。
+
+   为什么这样分层：2D 版的 core.js 与 ui.js/render.js 是耦合的，
+   而 3D 版需要完全不同的渲染管线。让"3D 视图"只依赖数据表、
+   由事件驱动结算，是目前不重写整个项目、又能立刻跑起来的做法。
+   （完整方案见 docs/xianxia-design.md 的 P0~P6 分阶段路线）
+   ========================================================================== */
+
+const D = window.D || {};
+const SECTS = D.SECTS || [];
+const q = new URLSearchParams(location.search);
+const sectId = q.get('sect') || localStorage.getItem('zx_sect') || (SECTS[0] && SECTS[0].id) || 'qingyun';
+const SECT = SECTS.find(s => s.id === sectId) || SECTS[0] || { name: '青云门', color: '#5eead4' };
+const COL = new THREE.Color(SECT.color || '#5eead4');
+
+/* ---------------------------------------------------------------- 画质档位 */
+const TIERS = [
+  { name: '低', dpr: 1.0,  shadow: 0,     particles: 60,  props: 14, refine: false },
+  { name: '中', dpr: 1.5,  shadow: 1024,  particles: 140, props: 26, refine: false },
+  { name: '高', dpr: 2.0,  shadow: 2048,  particles: 260, props: 40, refine: true }
+];
+let tier = 2;
+const saved = parseInt(localStorage.getItem('zx3d_tier'), 10);
+if (saved >= 0 && saved <= 2) tier = saved;
+
+/* ---------------------------------------------------------------- 渲染器 */
+const canvas = document.getElementById('stage');
+const renderer = new THREE.WebGLRenderer({ canvas, antialias: tier >= 1, powerPreference: 'high-performance' });
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.05;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+
+const scene = new THREE.Scene();
+scene.fog = new THREE.FogExp2(0x0d1420, 0.019);
+
+const camera = new THREE.PerspectiveCamera(46, 1, 0.1, 400);
+camera.position.set(0, 5.2, 12.5);
+
+const controls = new OrbitControls(camera, canvas);
+controls.enableDamping = true;
+controls.dampingFactor = 0.075;
+controls.minDistance = 5.5;
+controls.maxDistance = 26;
+controls.minPolarAngle = 0.35;
+controls.maxPolarAngle = Math.PI * 0.47;
+controls.target.set(0, 2.1, 0);
+controls.rotateSpeed = 0.55;
+controls.zoomSpeed = 0.8;
+controls.enablePan = false;
+
+/* ------------------------------------------------------------ 程序化贴图 */
+function canvasTex(size, draw, repeat) {
+  const c = document.createElement('canvas');
+  c.width = c.height = size;
+  draw(c.getContext('2d'), size);
+  const t = new THREE.CanvasTexture(c);
+  t.wrapS = t.wrapT = THREE.RepeatWrapping;
+  if (repeat) t.repeat.set(repeat, repeat);
+  t.colorSpace = THREE.SRGBColorSpace;
+  return t;
+}
+const groundTex = canvasTex(256, (g, s) => {
+  g.fillStyle = '#22301f'; g.fillRect(0, 0, s, s);
+  for (let i = 0; i < 2600; i++) {
+    const x = Math.random() * s, y = Math.random() * s, r = 1 + Math.random() * 3.4;
+    const v = 0.72 + Math.random() * 0.5;
+    g.fillStyle = 'rgba(' + Math.round(52 * v) + ',' + Math.round(74 * v) + ',' + Math.round(46 * v) + ',' + (0.35 + Math.random() * 0.5) + ')';
+    g.beginPath(); g.arc(x, y, r, 0, 6.283); g.fill();
+  }
+}, 22);
+const rockTex = canvasTex(128, (g, s) => {
+  g.fillStyle = '#4a4f57'; g.fillRect(0, 0, s, s);
+  for (let i = 0; i < 900; i++) {
+    const v = 0.6 + Math.random() * 0.8;
+    g.fillStyle = 'rgba(' + Math.round(74 * v) + ',' + Math.round(80 * v) + ',' + Math.round(90 * v) + ',.5)';
+    g.fillRect(Math.random() * s, Math.random() * s, 2 + Math.random() * 5, 2 + Math.random() * 4);
+  }
+}, 2);
+const skyTex = canvasTex(512, (g, s) => {
+  const grd = g.createLinearGradient(0, 0, 0, s);
+  grd.addColorStop(0, '#0a1020'); grd.addColorStop(0.44, '#14243c');
+  grd.addColorStop(0.72, '#2b3d52'); grd.addColorStop(1, '#4a5a63');
+  g.fillStyle = grd; g.fillRect(0, 0, s, s);
+  for (let i = 0; i < 320; i++) {                     /* 星点 */
+    const a = Math.random() * 0.75;
+    g.fillStyle = 'rgba(255,255,255,' + a + ')';
+    g.fillRect(Math.random() * s, Math.random() * s * 0.5, 1.2, 1.2);
+  }
+});
+scene.background = skyTex;
+
+/* ---------------------------------------------------------------- 光照 */
+const hemi = new THREE.HemisphereLight(0x9ec9ff, 0x2a2b22, 0.72);
+scene.add(hemi);
+const sun = new THREE.DirectionalLight(0xffe6bd, 2.15);
+sun.position.set(-9, 14, 8);
+sun.castShadow = true;
+scene.add(sun);
+const rim = new THREE.DirectionalLight(0x6fd8ff, 0.85);   /* 冷色轮廓光，让角色从背景里跳出来 */
+rim.position.set(7, 5, -11);
+scene.add(rim);
+const master = new THREE.PointLight(0xffffff, 0, 26, 2);  /* 施法时的动态点光 */
+master.position.set(0, 2.4, 0);
+scene.add(master);
+
+/* ---------------------------------------------------------------- 地面 */
+const ground = new THREE.Mesh(
+  new THREE.CircleGeometry(46, 64),
+  new THREE.MeshStandardMaterial({ map: groundTex, color: 0x8a9a86, roughness: 0.96, metalness: 0.02 })
+);
+ground.rotation.x = -Math.PI / 2;
+ground.receiveShadow = true;
+scene.add(ground);
+
+/* 石台：把战斗区框出来 */
+const discMat = new THREE.MeshStandardMaterial({ map: rockTex, color: 0xa9b0b8, roughness: 0.78, metalness: 0.06 });
+const disc = new THREE.Mesh(new THREE.CylinderGeometry(9.6, 10.4, 0.5, 64), discMat);
+disc.position.y = -0.24; disc.receiveShadow = true; disc.castShadow = true;
+scene.add(disc);
+const ringEdge = new THREE.Mesh(
+  new THREE.TorusGeometry(9.7, 0.13, 10, 96),
+  new THREE.MeshStandardMaterial({ color: COL, emissive: COL, emissiveIntensity: 1.5, roughness: 0.4 })
+);
+ringEdge.rotation.x = Math.PI / 2; ringEdge.position.y = 0.02;
+scene.add(ringEdge);
+
+/* 环境装饰：石块 + 竹 */
+const props = new THREE.Group();
+scene.add(props);
+function addProps(n) {
+  props.clear();
+  const rockGeo = new THREE.IcosahedronGeometry(1, 0);
+  for (let i = 0; i < n; i++) {
+    const a = Math.random() * Math.PI * 2;
+    const r = 11 + Math.random() * 22;
+    const s = 0.5 + Math.random() * 2.4;
+    const rock = new THREE.Mesh(rockGeo, new THREE.MeshStandardMaterial({ map: rockTex, roughness: 0.95 }));
+    rock.position.set(Math.cos(a) * r, s * 0.42, Math.sin(a) * r);
+    rock.scale.set(s, s * (0.6 + Math.random() * 0.6), s);
+    rock.rotation.set(Math.random(), Math.random(), Math.random());
+    rock.castShadow = tier >= 1; rock.receiveShadow = true;
+    props.add(rock);
+  }
+  const stGeo = new THREE.CylinderGeometry(0.09, 0.14, 5.4, 6);
+  const leafGeo = new THREE.ConeGeometry(0.62, 1.5, 6);
+  const stMat = new THREE.MeshStandardMaterial({ color: 0x53603a, roughness: 0.9 });
+  const lfMat = new THREE.MeshStandardMaterial({ color: 0x3f6b40, roughness: 0.85, side: THREE.DoubleSide });
+  for (let i = 0; i < Math.round(n * 0.7); i++) {
+    const a = Math.random() * Math.PI * 2, r = 13 + Math.random() * 20;
+    const g2 = new THREE.Group();
+    const st = new THREE.Mesh(stGeo, stMat); st.position.y = 2.7; st.castShadow = tier >= 1; g2.add(st);
+    for (let k = 0; k < 3; k++) {
+      const lf = new THREE.Mesh(leafGeo, lfMat);
+      lf.position.set((Math.random() - 0.5) * 0.5, 4.6 + k * 0.55, (Math.random() - 0.5) * 0.5);
+      lf.rotation.z = (Math.random() - 0.5) * 0.5;
+      g2.add(lf);
+    }
+    g2.position.set(Math.cos(a) * r, 0, Math.sin(a) * r);
+    g2.rotation.y = Math.random() * 3.14;
+    props.add(g2);
+  }
+}
+addProps(TIERS[tier].props);
+
+/* ------------------------------------------------------------ 角色模型 */
+/* 程序化低模：立绘是位图、没有骨骼，3D 版先用几何体搭出可动的形体，
+   骨骼模型（GLB）产出后只要替换 buildHero/buildMob 的返回即可。 */
+function mat(color, rough, emis) {
+  return new THREE.MeshStandardMaterial({
+    color, roughness: rough == null ? 0.62 : rough, metalness: 0.06,
+    emissive: emis || 0x000000, emissiveIntensity: emis ? 1.1 : 0
+  });
+}
+function limb(geo, m, x, y, z) {
+  const o = new THREE.Mesh(geo, m);
+  o.position.set(x, y, z); o.castShadow = tier >= 1;
+  return o;
+}
+function buildHero() {
+  const g = new THREE.Group();
+  const robe = mat(0xf3f1ea, 0.7), trim = mat(COL.getHex(), 0.5, COL.getHex());
+  const skin = mat(0xf0d9c2, 0.75), hair = mat(0xe9e6df, 0.7);
+  const body = new THREE.Mesh(new THREE.CylinderGeometry(0.52, 0.94, 2.5, 16), robe);
+  body.position.y = 1.55; body.castShadow = tier >= 1; g.add(body);
+  const hem = new THREE.Mesh(new THREE.TorusGeometry(0.9, 0.06, 8, 30), trim);
+  hem.rotation.x = Math.PI / 2; hem.position.y = 0.42; g.add(hem);
+  g.add(limb(new THREE.CapsuleGeometry(0.42, 0.3, 4, 12), robe, 0, 2.86, 0));
+  g.add(limb(new THREE.SphereGeometry(0.36, 20, 16), skin, 0, 3.34, 0));
+  const bun = limb(new THREE.SphereGeometry(0.3, 16, 12), hair, 0, 3.62, -0.06);
+  bun.scale.set(1, 0.72, 1); g.add(bun);
+  const tail = limb(new THREE.CapsuleGeometry(0.13, 1.0, 4, 10), hair, 0, 2.86, -0.4);
+  tail.rotation.x = 0.22; g.add(tail);
+  const armL = limb(new THREE.CapsuleGeometry(0.15, 0.78, 4, 10), robe, 0.62, 2.42, 0);
+  armL.rotation.z = -0.2; g.add(armL);
+  const armR = limb(new THREE.CapsuleGeometry(0.15, 0.78, 4, 10), robe, -0.62, 2.42, 0);
+  armR.rotation.z = 0.2; g.add(armR);
+  const sash = new THREE.Mesh(new THREE.BoxGeometry(1.16, 0.2, 0.72), trim);
+  sash.position.y = 1.95; g.add(sash);
+  const sword = new THREE.Group();                      /* 右手兵器：可独立抬起 */
+  const blade = new THREE.Mesh(new THREE.BoxGeometry(0.1, 2.5, 0.03),
+    new THREE.MeshStandardMaterial({ color: 0x9ef3e4, emissive: COL.getHex(), emissiveIntensity: 1.35,
+      roughness: 0.22, metalness: 0.35, transparent: true, opacity: 0.94 }));
+  blade.position.y = 1.25; blade.castShadow = tier >= 1; sword.add(blade);
+  const guard = new THREE.Mesh(new THREE.BoxGeometry(0.42, 0.1, 0.12), trim);
+  sword.add(guard);
+  const hilt = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.06, 0.36, 8), mat(0x5b4a33, 0.8));
+  hilt.position.y = -0.2; sword.add(hilt);
+  sword.position.set(-0.82, 2.05, 0.06);
+  sword.rotation.z = 0.16;
+  g.add(sword);
+  g.userData.arm = armR; g.userData.sword = sword; g.userData.armL = armL;
+  g.userData.body = body; g.userData.head = bun;
+  return g;
+}
+function buildMob(kind) {
+  const g = new THREE.Group();
+  const pal = { beast: [0x6b4a2e, 0x2f2a24], demon: [0x6d2545, 0x2a1020], ghost: [0x9fd8d0, 0x2c4a48] };
+  const p = pal[kind] || pal.beast;
+  const body = new THREE.Mesh(new THREE.CapsuleGeometry(0.62, 1.05, 6, 14),
+    new THREE.MeshStandardMaterial({ color: p[0], roughness: 0.82, emissive: p[1], emissiveIntensity: 0.45 }));
+  body.rotation.z = Math.PI / 2; body.position.y = 1.15; body.castShadow = tier >= 1; g.add(body);
+  const head = new THREE.Mesh(new THREE.IcosahedronGeometry(0.52, 1),
+    new THREE.MeshStandardMaterial({ color: p[0], roughness: 0.8, flatShading: true }));
+  head.position.set(-0.98, 1.42, 0); head.castShadow = tier >= 1; g.add(head);
+  const eye = new THREE.Mesh(new THREE.SphereGeometry(0.11, 10, 8),
+    new THREE.MeshStandardMaterial({ color: 0xff5a5a, emissive: 0xff2d2d, emissiveIntensity: 2.4 }));
+  eye.position.set(-1.36, 1.5, 0.2); g.add(eye);
+  const eye2 = eye.clone(); eye2.position.z = -0.2; g.add(eye2);
+  for (let i = 0; i < 4; i++) {
+    const leg = new THREE.Mesh(new THREE.CapsuleGeometry(0.13, 0.62, 4, 8),
+      new THREE.MeshStandardMaterial({ color: p[1], roughness: 0.85 }));
+    leg.position.set(-0.62 + (i % 2) * 1.2, 0.42, i < 2 ? 0.42 : -0.42);
+    leg.castShadow = tier >= 1; g.add(leg);
+  }
+  const tail = new THREE.Mesh(new THREE.ConeGeometry(0.2, 1.1, 8),
+    new THREE.MeshStandardMaterial({ color: p[0], roughness: 0.85 }));
+  tail.position.set(1.5, 1.4, 0); tail.rotation.z = -1.1; g.add(tail);
+  g.userData.body = body; g.userData.head = head;
+  return g;
+}
+
+/* ------------------------------------------------------------ 粒子系统 */
+const PMAX = TIERS[2].particles;
+const pGeo = new THREE.BufferGeometry();
+const pPos = new Float32Array(PMAX * 3);
+const pCol = new Float32Array(PMAX * 3);
+const pVel = new Float32Array(PMAX * 3);
+const pLife = new Float32Array(PMAX);
+pGeo.setAttribute('position', new THREE.BufferAttribute(pPos, 3));
+pGeo.setAttribute('color', new THREE.BufferAttribute(pCol, 3));
+const points = new THREE.Points(pGeo, new THREE.PointsMaterial({
+  size: 0.24, vertexColors: true, transparent: true, opacity: 0.95,
+  blending: THREE.AdditiveBlending, depthWrite: false, sizeAttenuation: true
+}));
+points.frustumCulled = false;
+scene.add(points);
+let pHead = 0;
+function spawnParticles(pos, n, color, spread, up) {
+  n = Math.min(n, TIERS[tier].particles);
+  const c = new THREE.Color(color);
+  for (let i = 0; i < n; i++) {
+    const k = pHead = (pHead + 1) % PMAX;
+    pPos[k * 3] = pos.x; pPos[k * 3 + 1] = pos.y; pPos[k * 3 + 2] = pos.z;
+    const a = Math.random() * Math.PI * 2, s = (0.6 + Math.random() * 1.5) * spread;
+    pVel[k * 3] = Math.cos(a) * s;
+    pVel[k * 3 + 1] = (up ? 1.4 : 0.4) + Math.random() * (up ? 3.0 : 1.2);
+    pVel[k * 3 + 2] = Math.sin(a) * s;
+    pCol[k * 3] = c.r * (0.8 + Math.random() * 0.5);
+    pCol[k * 3 + 1] = c.g * (0.8 + Math.random() * 0.5);
+    pCol[k * 3 + 2] = c.b * (0.8 + Math.random() * 0.5);
+    pLife[k] = 0.55 + Math.random() * 0.55;
+  }
+}
+function stepParticles(dt) {
+  for (let k = 0; k < PMAX; k++) {
+    if (pLife[k] <= 0) continue;
+    pLife[k] -= dt;
+    if (pLife[k] <= 0) { pPos[k * 3 + 1] = -999; continue; }
+    pVel[k * 3 + 1] -= 5.2 * dt;
+    pPos[k * 3] += pVel[k * 3] * dt;
+    pPos[k * 3 + 1] += pVel[k * 3 + 1] * dt;
+    pPos[k * 3 + 2] += pVel[k * 3 + 2] * dt;
+  }
+  pGeo.attributes.position.needsUpdate = true;
+  pGeo.attributes.color.needsUpdate = true;
+}
+
+/* ------------------------------------------------------- 冲击波 / 刀光 */
+const fxRings = [];
+function shockwave(pos, color, maxR) {
+  const m = new THREE.Mesh(
+    new THREE.RingGeometry(0.35, 0.5, 48),
+    new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.9,
+      side: THREE.DoubleSide, blending: THREE.AdditiveBlending, depthWrite: false })
+  );
+  m.rotation.x = -Math.PI / 2;
+  m.position.set(pos.x, 0.06, pos.z);
+  scene.add(m);
+  fxRings.push({ m, t: 0, maxR: maxR || 3.4 });
+}
+function stepRings(dt) {
+  for (let i = fxRings.length - 1; i >= 0; i--) {
+    const r = fxRings[i];
+    r.t += dt;
+    const k = Math.min(1, r.t / 0.55);
+    r.m.scale.setScalar(0.4 + k * r.maxR);
+    r.m.material.opacity = 0.9 * (1 - k);
+    if (k >= 1) { scene.remove(r.m); r.m.geometry.dispose(); r.m.material.dispose(); fxRings.splice(i, 1); }
+  }
+}
+
+/* ---------------------------------------------------------------- 战斗 */
+const SKILLS = [
+  { key: 's1', name: '御剑术',   type: 'single', ratio: 3.0, hits: 1, mp: 8,  cd: 5 },
+  { key: 's2', name: '重击',     type: 'single', ratio: 5.2, hits: 1, mp: 14, cd: 9,  raise: true },
+  { key: 's3', name: '心法',     type: 'buff',   ratio: 0,   hits: 0, mp: 20, cd: 18, buff: 0.35 },
+  { key: 's4', name: '群攻',     type: 'aoe',    ratio: 2.4, hits: 3, mp: 26, cd: 13 },
+  { key: 's5', name: '绝技',     type: 'ult',    ratio: 9.5, hits: 1, mp: 42, cd: 26, raise: true, heal: 0.16 }
+];
+const names = (SECT.skillNames || []).map(x => x[0]);
+SKILLS.forEach((s, i) => { if (names[i]) s.name = names[i]; });
+
+const G = {
+  lv: 1, exp: 0, hp: 1, mp: 1, atk: 24, maxHp: 260, maxMp: 90, cd: {}, buff: 0,
+  raise: 0, auto: false, kills: 0
+};
+let mob = null;
+
+const hero = buildHero();
+hero.position.set(2.4, 0, 0);
+hero.rotation.y = -0.9;
+scene.add(hero);
+
+function spawnMob() {
+  if (mob) { scene.remove(mob); mob = null; }
+  const kind = ['beast', 'demon', 'ghost'][Math.floor(Math.random() * 3)];
+  mob = buildMob(kind);
+  mob.position.set(-3.4 - Math.random() * 1.4, 0, (Math.random() - 0.5) * 4.6);
+  mob.rotation.y = 1.2;
+  mob.userData.hp = G.maxHp * (0.4 + Math.random() * 0.5);
+  mob.userData.max = mob.userData.hp;
+  mob.userData.atk = 9 + G.lv * 3.2;
+  mob.userData.t = 1.4 + Math.random() * 0.8;
+  scene.add(mob);
+  addLog('妖物「' + ({ beast: '岩甲兽', demon: '血魇', ghost: '幽魄' }[kind]) + '」现身', '');
+}
+
+/* 姿态：抬剑 / 挥砍 / 受击 —— 与 2D 版同一套"手臂角度"思路 */
+const pose = { arm: 0, armT: 0, swing: 0, hitT: 0, castT: 0 };
+function applyPose(dt) {
+  const u = hero.userData;
+  const idle = Math.sin(performance.now() * 0.0016) * 0.03;
+  hero.position.y = idle;
+  pose.arm += (pose.armT - pose.arm) * Math.min(1, dt * 9);
+  u.arm.rotation.z = 0.2 - pose.arm;
+  u.sword.rotation.z = 0.16 - pose.arm * 1.55 - pose.swing * 2.4;
+  u.sword.position.y = 2.05 + pose.arm * 0.5 - pose.swing * 0.62;
+  u.sword.position.x = -0.82 + pose.arm * 0.24 + pose.swing * 0.5;
+  u.sword.rotation.x = -pose.swing * 0.7;
+  hero.rotation.z = pose.swing * 0.14;
+  if (pose.hitT > 0) { pose.hitT -= dt; hero.rotation.z = -0.2 * (pose.hitT / 0.3); }
+  if (pose.swing > 0) pose.swing = Math.max(0, pose.swing - dt / 0.26);
+  u.body.rotation.y = idle * 0.3;
+}
+
+function flash(color, power, dur) {
+  master.color.set(color); master.intensity = power;
+  setTimeout(() => { master.intensity = 0; }, dur || 240);
+}
+const el = id => document.getElementById(id);
+function addLog(txt, cls) {
+  const box = el('log');
+  box.innerHTML = '<div class="' + (cls || '') + '">' + txt + '</div>' + box.innerHTML;
+  while (box.children.length > 6) box.removeChild(box.lastChild);
+}
+let toastT = 0;
+function toast(txt) {
+  const t = el('toast');
+  t.textContent = txt; t.classList.add('on');
+  clearTimeout(toastT); toastT = setTimeout(() => t.classList.remove('on'), 900);
+}
+
+function damage(n, crit) {
+  if (!mob) return;
+  mob.userData.hp -= n;
+  spawnParticles(mob.position, crit ? 20 : 10, crit ? '#fde047' : COL.getStyle(), 2.2, true);
+  shockwave(mob.position, crit ? '#fde047' : COL.getStyle(), crit ? 2.6 : 1.7);
+  flash(COL.getHex(), 9, 200);
+  /* 怪物受击抖动 */
+  mob.userData.hitT = 0.22;
+  if (mob.userData.hp <= 0) {
+    kills();
+  }
+}
+function kills() {
+  G.kills++;
+  spawnParticles(mob.position, 40, '#facc15', 2.6, true);
+  shockwave(mob.position, '#facc15', 4.2);
+  addLog('击杀！<b>修为 +' + (12 + G.lv * 3) + '</b>', '');
+  G.exp += 12 + G.lv * 3;
+  /* 升级 */
+  const need = Math.floor(80 * Math.pow(1.22, G.lv - 1));
+  if (G.exp >= need) {
+    G.exp -= need; G.lv++;
+    G.atk *= 1.16; G.maxHp *= 1.12; G.maxMp *= 1.08; G.hp = 1; G.mp = 1;
+    toast('突破！ Lv.' + G.lv);
+    spawnParticles(hero.position, 60, '#fff3c4', 1.6, true);
+    flash(0xffffff, 22, 320);
+  }
+  scene.remove(mob); mob = null;
+  setTimeout(spawnMob, 620);
+}
+
+let heroAtk = 0.9, mobAtk = 0;
+function tick(dt) {
+  if (!G.auto || !mob) return;
+  G.hp = Math.min(1, G.hp + 0.012 * dt);
+  G.mp = Math.min(1, G.mp + 0.018 * dt);
+  if (G.buff > 0) G.buff -= dt;
+
+  /* 技能：与 2D 版同一条判定顺序 —— 前置(举剑) → 内力 → 冷却 */
+  for (const s of SKILLS) {
+    G.cd[s.key] = Math.max(0, (G.cd[s.key] || 0) - dt);
+    if (G.cd[s.key] > 0) continue;
+    if (s.raise && G.raise <= 0) { G.raise = 6; pose.armT = 0.62; toast('举剑 · ' + s.name); break; }
+    if (G.mp * G.maxMp < s.mp) continue;
+    cast(s);
+    break;
+  }
+  if (G.raise > 0) { G.raise -= dt; if (G.raise <= 0) { pose.armT = 0; addLog('剑已放下', ''); } }
+
+  /* 普攻：靠"出手一次的位移"读出挥砍 */
+  heroAtk -= dt;
+  if (heroAtk <= 0) {
+    heroAtk = 1.05;
+    pose.swing = 1;
+    const dmg = G.atk * (0.9 + Math.random() * 0.3);
+    setTimeout(() => damage(Math.round(dmg), false), 130);
+    addLog('普攻 <span class="hit">-' + Math.round(dmg) + '</span>', '');
+  }
+  /* 怪物出手 */
+  mobAtk -= dt;
+  if (mobAtk <= 0) {
+    mobAtk = 2.0;
+    const d = mob.userData.atk * (0.85 + Math.random() * 0.3) * (1 - 0.08);
+    G.hp = Math.max(0, G.hp - d / G.maxHp);
+    pose.hitT = 0.3;
+    spawnParticles(hero.position, 8, '#fca5a5', 1.4, false);
+    addLog('受击 <span class="hit">-' + Math.round(d) + '</span>', '');
+    if (G.hp <= 0.001) { G.hp = 1; mob.userData.hp = mob.userData.max; addLog('气血见底，调息后重整旗鼓', ''); toast('重伤！'); }
+  }
+}
+function cast(s) {
+  G.cd[s.key] = s.cd;
+  G.mp -= s.mp / G.maxMp;
+  if (s.raise) { G.raise = 0; pose.armT = 0; addLog('放出【' + s.name + '】，剑随招落', 'sk'); }
+  else addLog('施展【' + s.name + '】', 'sk');
+  toast(s.name);
+  pose.swing = 1;
+  const crit = Math.random() < 0.18;
+  const n = s.hits || 1;
+  const per = Math.round(G.atk * s.ratio * (1 + (G.buff > 0 ? 0.35 : 0)) * (crit ? 1.9 : 1) / n)
+    * (0.92 + Math.random() * 0.16);
+  for (let i = 0; i < n; i++) setTimeout(() => damage(per, crit), 130 + i * 90);
+  if (s.type === 'buff') { G.buff = 10; spawnParticles(hero.position, 34, COL.getStyle(), 1.2, true); toast('攻势大涨'); }
+  if (s.heal) { G.hp = Math.min(1, G.hp + s.heal); }
+  /* 群攻：三圈冲击波（与 2D 版 s4 的构图一致） */
+  if (s.type === 'aoe') for (let i = 0; i < 3; i++) setTimeout(() => shockwave(mob.position, COL.getStyle(), 3.0 + i * 0.8), i * 80);
+}
+
+/* ---------------------------------------------------------------- HUD */
+let hudT = 0;
+function hud(dt) {
+  hudT += dt; if (hudT < 0.1) return; hudT = 0;
+  el('hpBar').style.transform = 'scaleX(' + Math.max(0, G.hp).toFixed(3) + ')';
+  el('mpBar').style.transform = 'scaleX(' + Math.max(0, G.mp).toFixed(3) + ')';
+  el('hpTxt').textContent = Math.round(G.hp * G.maxHp) + ' / ' + Math.round(G.maxHp);
+  el('mpTxt').textContent = Math.round(G.mp * G.maxMp) + ' / ' + Math.round(G.maxMp);
+  el('lvName').textContent = 'Lv.' + G.lv;
+}
+el('sectName').textContent = SECT.name + (q.get('sect') ? '' : '');
+el('back2d').addEventListener('click', () => { location.href = 'index.html'; });
+el('fight').addEventListener('click', () => {
+  G.auto = !G.auto;
+  el('fight').textContent = G.auto ? '停战' : '开战';
+  el('hint').style.opacity = G.auto ? '0' : '1';
+  if (G.auto) { if (!mob) spawnMob(); addLog('开始挂机', 'sk'); } else addLog('已停战', '');
+  try { window.Music && Music.start && Music.start(); } catch (e) { }
+});
+el('quality').addEventListener('click', () => {
+  tier = (tier + 1) % 3;
+  localStorage.setItem('zx3d_tier', String(tier));
+  el('quality').textContent = '画质 ' + TIERS[tier].name;
+  applyTier();
+  addLog('画质切换到「' + TIERS[tier].name + '」', '');
+});
+function applyTier() {
+  const t = TIERS[tier];
+  renderer.setPixelRatio(Math.min(devicePixelRatio || 1, t.dpr));
+  renderer.shadowMap.enabled = t.shadow > 0;
+  sun.castShadow = t.shadow > 0;
+  if (t.shadow) { sun.shadow.mapSize.set(t.shadow, t.shadow); sun.shadow.camera.left = -16;
+    sun.shadow.camera.right = 16; sun.shadow.camera.top = 16; sun.shadow.camera.bottom = -16;
+    sun.shadow.bias = -0.0012; sun.shadow.normalBias = 0.03; }
+  props.traverse(o => { if (o.isMesh) o.castShadow = t.shadow > 0 && o.geometry.type !== 'ConeGeometry'; });
+  points.material.size = tier === 0 ? 0.2 : 0.24;
+  addProps(t.props);
+}
+el('quality').textContent = '画质 ' + TIERS[tier].name;
+
+function resize() {
+  const w = innerWidth, h = innerHeight;
+  camera.aspect = w / h;
+  /* 窄屏把镜头拉远一点，保证主角与妖物同框 */
+  camera.fov = w / h < 1 ? 56 : 46;
+  camera.updateProjectionMatrix();
+  renderer.setSize(w, h, false);
+}
+addEventListener('resize', resize);
+resize(); applyTier();
+
+/* --------------------------------------------------- 主循环 + 自适应画质 */
+let last = performance.now(), acc = 0, frames = 0, fps = 60, lowStreak = 0;
+function loop(now) {
+  const dt = Math.min(0.05, (now - last) / 1000);
+  last = now;
+  tick(dt); applyPose(dt); stepParticles(dt); stepRings(dt); hud(dt);
+  if (mob) {
+    const m = mob.userData;
+    m.body.position.y = 1.15 + Math.sin(now * 0.0032) * 0.06;
+    if (m.hitT > 0) { m.hitT -= dt; mob.position.x += dt * 3.4; }
+    else mob.position.x += (mob.position.x > -6.2 ? -0.05 : 0.05) * dt;
+    mob.rotation.y = 1.2 + Math.sin(now * 0.001) * 0.08;
+  }
+  /* 相机跟随战场中心，但仍可自由旋转 */
+  const cx = mob ? (hero.position.x + mob.position.x) * 0.5 : hero.position.x;
+  controls.target.lerp(new THREE.Vector3(cx * 0.6, 2.05, mob ? mob.position.z * 0.35 : 0), 0.035);
+  controls.update();
+  master.position.set(hero.position.x - 0.4, 2.5, 0.4);
+  renderer.render(scene, camera);
+
+  /* 帧率自适应：连续偏低就自动降一档（中端机保流畅） */
+  frames++; acc += dt;
+  if (acc >= 0.6) {
+    fps = frames / acc; frames = 0; acc = 0;
+    el('fps').textContent = Math.round(fps) + ' FPS · ' + TIERS[tier].name;
+    if (fps < 42 && tier > 0) { if (++lowStreak >= 3) { lowStreak = 0; tier--; el('quality').textContent = '画质 ' + TIERS[tier].name; applyTier(); addLog('帧率偏低，自动降到「' + TIERS[tier].name + '」', ''); } }
+    else lowStreak = 0;
+  }
+  requestAnimationFrame(loop);
+}
+spawnMob();
+setTimeout(() => {
+  el('loading').classList.add('done');
+  addLog('拖动画布环视洞天 · 点「开战」开始挂机', 'sk');
+}, 420);
+requestAnimationFrame(loop);
+</script>
+</body>
+</html>
