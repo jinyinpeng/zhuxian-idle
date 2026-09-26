@@ -97,10 +97,14 @@
   @keyframes spin { to { transform:rotate(360deg); } }
   #ltxt { color:#a8a29e; font-size:12px; } #lsub { color:#57534e; font-size:11px; }
 </style>
+<!-- three.js 已本地化到 assets/three/（只保留实际用到的 13 个文件，合计 0.83MB），
+     彻底不再依赖 unpkg CDN —— 3D 页因此断网也能打开。
+     升级 three 的做法：npm i three@版本 → 重新跑本地化脚本拷贝。
+     注意：importmap 里必须是纯 JSON，不能写注释。 -->
 <script type="importmap">
 { "imports": {
-    "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
-    "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+    "three": "assets/three/three.module.min.js",
+    "three/addons/": "assets/three/addons/"
 } }
 </script>
 </head>
