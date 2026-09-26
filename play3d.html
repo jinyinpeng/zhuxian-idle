@@ -262,6 +262,48 @@ const treeLeaf = new THREE.InstancedMesh(new THREE.ConeGeometry(0.66, 1.5, 6),
   new THREE.MeshStandardMaterial({ color: 0x3d6a42, roughness: 0.86, side: THREE.DoubleSide }), 120);
 [rockMesh, treeTrunk, treeLeaf].forEach(m => { m.castShadow = tier >= 1; m.receiveShadow = true; scene.add(m); });
 
+/* ---------- 区域专属地形：八个区域各有各的"该长什么样" ----------
+   同一套代码，靠一张风格表切换：植被用哪种、地面什么色、雾什么色、天上飘什么。
+   新增的植被也都是 InstancedMesh，一个区域最多 4 个 draw call。 */
+const TERRAIN = {
+  r01: { tree: 'pine',   density: 1.0, ground: 0x8f9e88, fog: 0x0b1220, sun: 0xffe6bd, weather: '',      glow: 0 },
+  r02: { tree: 'bamboo', density: 1.5, ground: 0x7f9a92, fog: 0x0a1a24, sun: 0xd8f0ff, weather: 'mist',  glow: 0 },
+  r03: { tree: 'pillar', density: 0.9, ground: 0x4a4658, fog: 0x140f22, sun: 0xc9b6ff, weather: 'mote',  glow: 0 },
+  r04: { tree: 'deadtree', density: 0.7, ground: 0x4a3830, fog: 0x1d0e08, sun: 0xffb066, weather: 'ember', glow: 1 },
+  r05: { tree: 'deadtree', density: 1.1, ground: 0x4c5a44, fog: 0x0d1a12, sun: 0xcfe8b8, weather: 'mist',  glow: 0 },
+  r06: { tree: 'pillar', density: 1.2, ground: 0x5c5068, fog: 0x1a0e20, sun: 0xffc9f2, weather: 'mote',  glow: 1 },
+  r07: { tree: 'ice',    density: 1.3, ground: 0xa8bcc8, fog: 0x0d1a2c, sun: 0xdcefff, weather: 'snow',  glow: 0 },
+  r08: { tree: 'sword',  density: 0.8, ground: 0x5a4046, fog: 0x200a0e, sun: 0xffb8b8, weather: 'ember', glow: 1 }
+};
+let terrain = TERRAIN.r01;
+const POOL = 40;
+function newInst(geo, color, rough, emissive, count) {
+  const m = new THREE.InstancedMesh(geo,
+    new THREE.MeshStandardMaterial({ color, roughness: rough, metalness: 0.08,
+      emissive: emissive || 0x000000, emissiveIntensity: emissive ? 0.55 : 0 }), count || POOL);
+  m.castShadow = tier >= 1; m.receiveShadow = true;
+  scene.add(m);
+  return m;
+}
+/* 六种"树"：松 / 竹 / 石柱 / 枯木 / 冰晶 / 巨剑（诛仙剑阵）
+   注意 b（叶/冠）的实例数是 POOL×3 —— 每棵树挂 3 个冠，
+   按 POOL 建会在第 14 棵时越界（setMatrixAt 越界会直接抛错，整片植被都不铺了）。 */
+const LEAFMAX = POOL * 3;
+const kinds = {
+  /* ay = 主干中心高度，by = 冠部起始高度（两者必须分开：用同一个值会让主干悬空） */
+  pine: { a: newInst(new THREE.CylinderGeometry(0.09, 0.15, 5.4, 6), 0x4d5a36, 0.9),
+          b: newInst(new THREE.ConeGeometry(0.66, 1.5, 6), 0x3d6a42, 0.86, 0, LEAFMAX), ay: 2.7, bh: 3, by: 4.5 },
+  bamboo: { a: newInst(new THREE.CylinderGeometry(0.07, 0.08, 7.5, 6), 0x5c7a3a, 0.85, 0x0a2a10),
+            b: newInst(new THREE.ConeGeometry(0.42, 1.1, 5), 0x6f9e46, 0.8, 0, LEAFMAX), ay: 3.75, bh: 3, by: 6.6 },
+  pillar: { a: newInst(new THREE.CylinderGeometry(0.32, 0.52, 4.2, 7), 0x6c6878, 0.94),
+            b: newInst(new THREE.ConeGeometry(0.44, 0.9, 7), 0x7d7888, 0.9, 0, LEAFMAX), ay: 2.1, bh: 2, by: 4.7 },
+  deadtree: { a: newInst(new THREE.CylinderGeometry(0.1, 0.2, 4.0, 6), 0x3a3228, 0.92),
+              b: newInst(new THREE.ConeGeometry(0.5, 0.7, 5), 0x4a3f30, 0.9, 0, LEAFMAX), ay: 2.0, bh: 3, by: 3.9 },
+  ice: { a: newInst(new THREE.CylinderGeometry(0.11, 0.18, 5.0, 6), 0x7f96a6, 0.5),
+         b: newInst(new THREE.ConeGeometry(0.6, 2.0, 5), 0xdcefff, 0.32, 0x8fd8ff, LEAFMAX), ay: 2.5, bh: 2, by: 4.4 },
+  sword: { a: newInst(new THREE.BoxGeometry(0.34, 7.6, 0.12), 0x9aa4ae, 0.42, 0xff6b6b),
+           b: newInst(new THREE.BoxGeometry(1.0, 0.24, 0.3), 0x6b7280, 0.5, 0, LEAFMAX), ay: 3.8, bh: 1, by: 0.4 }
+};
 const dummy = new THREE.Object3D();
 function layoutProps(seed) {
   const T = TIERS[tier];
@@ -276,23 +318,51 @@ function layoutProps(seed) {
     dummy.updateMatrix();
     rockMesh.setMatrixAt(i, dummy.matrix);
   }
+  /* 旧的松树池不再使用（已并入 kinds.pine），但要显式藏起来 ——
+     InstancedMesh 的默认矩阵是单位矩阵，不藏就会在原点叠 40 棵 */
   for (let i = 0; i < 40; i++) {
-    const show = i < T.tree;
-    const a = rand() * Math.PI * 2, r = 13 + rand() * 21;
-    dummy.position.set(Math.cos(a) * r, show ? 2.7 : -900, Math.sin(a) * r);
-    dummy.scale.setScalar(0.8 + rand() * 0.7);
-    dummy.rotation.set(0, rand() * 6.28, 0);
+    dummy.position.set(0, -900, 0); dummy.scale.setScalar(1); dummy.rotation.set(0, 0, 0);
     dummy.updateMatrix(); treeTrunk.setMatrixAt(i, dummy.matrix);
-    for (let k = 0; k < 3; k++) {
-      const li = i * 3 + k;
-      dummy.position.set(Math.cos(a) * r + (rand() - 0.5) * 0.5, show ? 4.5 + k * 0.56 : -900, Math.sin(a) * r + (rand() - 0.5) * 0.5);
-      dummy.rotation.set(0, rand() * 6.28, (rand() - 0.5) * 0.4);
-      dummy.updateMatrix(); treeLeaf.setMatrixAt(li, dummy.matrix);
-    }
   }
-  rockMesh.instanceMatrix.needsUpdate = true;
+  for (let i = 0; i < 120; i++) {
+    dummy.position.set(0, -900, 0); dummy.scale.setScalar(1); dummy.rotation.set(0, 0, 0);
+    dummy.updateMatrix(); treeLeaf.setMatrixAt(i, dummy.matrix);
+  }
   treeTrunk.instanceMatrix.needsUpdate = true;
   treeLeaf.instanceMatrix.needsUpdate = true;
+  rockMesh.instanceMatrix.needsUpdate = true;
+
+  /* 本区域该长什么：只铺风格表里那一种，其余整类藏到地下 */
+  const want = terrain.tree || 'pine';
+  const n = Math.round(T.tree * (terrain.density || 1));
+  for (const k in kinds) {
+    const K = kinds[k], on = k === want;
+    for (let i = 0; i < POOL; i++) {
+      const show = on && i < n;
+      const a = rand() * Math.PI * 2, r = 13 + rand() * 22;
+      const sc = 0.8 + rand() * 0.7;
+      dummy.rotation.set(0, rand() * 6.28, 0);
+      dummy.position.set(Math.cos(a) * r, show ? (K.ay || 2) * sc : -900, Math.sin(a) * r);
+      dummy.scale.setScalar(sc);
+      dummy.updateMatrix(); K.a.setMatrixAt(i, dummy.matrix);
+      if (k === 'sword') {          /* 巨剑：剑格单摆 */
+        dummy.position.set(Math.cos(a) * r, show ? 0.4 : -900, Math.sin(a) * r);
+        dummy.rotation.set(0, rand() * 6.28, 0); dummy.scale.setScalar(sc);
+        dummy.updateMatrix(); K.b.setMatrixAt(i, dummy.matrix);
+        continue;
+      }
+      for (let j = 0; j < K.bh; j++) {
+        const li = i * K.bh + j;
+        dummy.position.set(Math.cos(a) * r + (rand() - 0.5) * 0.5,
+          show ? (K.by + j * 0.56) * sc : -900,
+          Math.sin(a) * r + (rand() - 0.5) * 0.5);
+        dummy.rotation.set(0, rand() * 6.28, (rand() - 0.5) * (k === 'pillar' ? 0.18 : 0.4));
+        dummy.updateMatrix(); K.b.setMatrixAt(li, dummy.matrix);
+      }
+    }
+    K.a.instanceMatrix.needsUpdate = true;
+    K.b.instanceMatrix.needsUpdate = true;
+  }
 }
 layoutProps(20260926);
 
@@ -772,16 +842,67 @@ REGIONS.forEach(r => {
   if (r.id === G.state.region) o.selected = true;
   regionSel.appendChild(o);
 });
+/* ---------- 天气：雪 / 火星 / 雾滴 / 灵尘 ----------
+   一套粒子池，按区域换颜色与运动方向（雪往下、火星往上） */
+const WMAX = 260;
+const wGeo = new THREE.BufferGeometry();
+const wPos = new Float32Array(WMAX * 3), wVel = new Float32Array(WMAX * 3);
+wGeo.setAttribute('position', new THREE.BufferAttribute(wPos, 3));
+const wMat = new THREE.PointsMaterial({ size: 0.12, color: 0xffffff, transparent: true,
+  opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false });
+const weather = new THREE.Points(wGeo, wMat);
+weather.frustumCulled = false;
+scene.add(weather);
+let weatherMode = '';
+function seedWeather() {
+  const c = { snow: 0xdcefff, ember: 0xff9a4d, mist: 0x9fd8d0, mote: 0xd8c8ff }[weatherMode] || 0xffffff;
+  wMat.color.set(c);
+  wMat.size = weatherMode === 'ember' ? 0.15 : (weatherMode === 'mist' ? 0.55 : 0.12);
+  wMat.opacity = weatherMode ? 0.8 : 0;
+  const rise = weatherMode === 'ember' || weatherMode === 'mote';
+  for (let i = 0; i < WMAX; i++) {
+    wPos[i * 3] = (Math.random() - 0.5) * 60;
+    wPos[i * 3 + 1] = Math.random() * 22;
+    wPos[i * 3 + 2] = (Math.random() - 0.5) * 60;
+    wVel[i * 3] = (Math.random() - 0.5) * 0.5;
+    wVel[i * 3 + 1] = rise ? 0.7 + Math.random() * 1.3 : -(0.5 + Math.random() * 1.4);
+    wVel[i * 3 + 2] = (Math.random() - 0.5) * 0.5;
+  }
+  wGeo.attributes.position.needsUpdate = true;
+}
+function stepWeather(dt) {
+  if (!weatherMode) return;
+  for (let i = 0; i < WMAX; i++) {
+    wPos[i * 3] += wVel[i * 3] * dt;
+    wPos[i * 3 + 1] += wVel[i * 3 + 1] * dt;
+    wPos[i * 3 + 2] += wVel[i * 3 + 2] * dt;
+    if (wPos[i * 3 + 1] > 23 || wPos[i * 3 + 1] < -0.5) {
+      wPos[i * 3] = (Math.random() - 0.5) * 60;
+      wPos[i * 3 + 1] = wVel[i * 3 + 1] > 0 ? -0.5 : 22;
+      wPos[i * 3 + 2] = (Math.random() - 0.5) * 60;
+    }
+  }
+  wGeo.attributes.position.needsUpdate = true;
+}
 function applyRegion(id) {
   const r = G.regionOf ? G.regionOf(id) : (REGIONS.find(x => x.id === id) || {});
+  terrain = TERRAIN[id] || TERRAIN.r01;
   const accent = new THREE.Color(r.accent || SECT.color || '#5eead4');
   ringEdge.material.color.copy(accent);
   ringEdge.material.emissive.copy(accent);
-  const base = new THREE.Color(r.fog || 0x0b1220);
-  scene.fog.color.copy(base);
-  ground.material.color.set(r.ground || 0x8f9e88);
-  hemi.color.copy(base).lerp(new THREE.Color(0xa9d3ff), 0.5);
-  sun.color.set(r.sun || 0xffe6bd);
+  ringEdge.material.emissiveIntensity = terrain.glow ? 2.4 : 1.6;
+  const fogC = new THREE.Color(terrain.fog);
+  scene.fog.color.copy(fogC);
+  scene.fog.density = terrain.weather === 'mist' ? 0.042 : 0.019;
+  ground.material.color.set(terrain.ground);
+  hemi.color.copy(fogC).lerp(new THREE.Color(0xa9d3ff), 0.45);
+  sun.color.set(terrain.sun);
+  /* 岩石跟着区域走：火山/神庙/剑阵带一层热辉 */
+  rockMesh.material.color.set(terrain.ground).offsetHSL(0, -0.04, 0.14);
+  rockMesh.material.emissive.set(terrain.glow ? 0x2a0c06 : 0x000000);
+  rockMesh.material.emissiveIntensity = terrain.glow ? 0.5 : 0;
+  weatherMode = terrain.weather || '';
+  seedWeather();
   layoutProps((r.range && r.range[0] ? r.range[0] : 7) * 9973);
 }
 applyRegion(G.state.region);
@@ -800,7 +921,9 @@ function buildComposer() {
   if (!T.bloom) { composer = null; bloomPass = null; return; }
   composer = new EffectComposer(renderer);
   composer.addPass(new RenderPass(scene, camera));
-  bloomPass = new UnrealBloomPass(new THREE.Vector2(innerWidth, innerHeight), T.bloom, 0.62, 0.82);
+  /* 阈值 0.92：主角那身接近纯白的袍子在暗场景里很容易被 Bloom 糊成一团光，
+     抬高阈值后只有真正超过 1.0 的自发光（剑锋/门派色环/火星）才发光 */
+  bloomPass = new UnrealBloomPass(new THREE.Vector2(innerWidth, innerHeight), T.bloom, 0.58, 0.92);
   composer.addPass(bloomPass);
   composer.setSize(innerWidth, innerHeight);
 }
@@ -872,6 +995,7 @@ function loop(now) {
   stepRings(dt);
   hud(dt);
   updateMobs(dt, now);
+  stepWeather(dt);
   const cx = mobMeshes.size ? [...mobMeshes.values()].reduce((a, g) => a + g.position.x, 0) / mobMeshes.size : heroRoot.position.x;
   controls.target.lerp(new THREE.Vector3((heroRoot.position.x + cx) * 0.32, 2.05, 0), 0.035);
   controls.update();
