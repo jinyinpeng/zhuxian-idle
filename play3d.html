@@ -4,9 +4,17 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>诛仙问道 · 3D 洞天</title>
+<!-- 载入 2D 的样式表：3D 页要复用 2D 的面板体系（行囊 / 技能 / 任务 / 社交 / 设置 / 各类弹窗），
+     这些面板的样式全部在 css/style.css 里。本页自己的 <style> 紧跟在它后面，
+     用于中和它的全局规则、并覆盖个别同名类。 -->
+<link rel="stylesheet" href="css/style.css" />
 <style>
   * { box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  /* 中和 style.css 的全局规则：它给 body 加了 flex 居中（那是 2D 竖屏容器的需要），
+     3D 页是全屏画布布局，必须按回普通块级；否则视口外的元素会被它挤动。
+     本页的 HUD 都是 position:fixed，本来就相对视口定位，这里只补 display 一项。 */
   html,body { margin:0; height:100%; overflow:hidden; background:#06080c;
+    display:block; justify-content:normal;
     font:13px/1.5 system-ui,-apple-system,"PingFang SC","Microsoft YaHei",sans-serif; color:#e7e5e4; }
   #stage { position:fixed; inset:0; display:block; touch-action:none; }
   .hud { position:fixed; left:0; right:0; z-index:5; pointer-events:none; }
@@ -46,10 +54,14 @@
     18%  { opacity:1; transform:translate(-50%,-70%) scale(1.12); }
     100% { opacity:0; transform:translate(-50%,-190%) scale(.95); }
   }
-  .btn { pointer-events:auto; border:1px solid rgba(255,255,255,.16); background:rgba(10,14,20,.6);
+  .p3-btn { pointer-events:auto; border:1px solid rgba(255,255,255,.16); background:rgba(10,14,20,.6);
     color:#e7e5e4; border-radius:10px; padding:7px 11px; font-size:12px; white-space:nowrap; }
-  .btn.gold { border-color:rgba(250,204,21,.5); color:#facc15; }
-  select.btn { padding:6px 8px; }
+  .p3-btn.gold { border-color:rgba(250,204,21,.5); color:#facc15; }
+  select.p3-btn { padding:6px 8px; }
+  /* 面板入口按钮一排：与底部日志、开战按钮共存，靠右对齐不挡视野 */
+  .p3tabs { display:flex; gap:6px; justify-content:flex-end; flex-wrap:wrap;
+    pointer-events:auto; margin-bottom:6px; }
+  .p3tabs .p3-btn { height:30px; padding:0 10px; font-size:12px; }
   #fps { position:fixed; right:10px; top:calc(48px + env(safe-area-inset-top)); z-index:6;
     font:11px/1.45 ui-monospace,monospace; color:#a8a29e; text-align:right; white-space:pre; }
   #hint { position:fixed; left:50%; bottom:calc(74px + env(safe-area-inset-bottom)); transform:translateX(-50%);
@@ -115,10 +127,10 @@
   <div class="row" style="margin-bottom:6px">
     <span class="badge" id="bName">—</span>
     <span class="badge" id="bLv">Lv.1</span>
-    <select class="btn" id="region"></select>
-    <button class="btn gold" id="mapBtn">地图</button>
+    <select class="p3-btn" id="region"></select>
+    <button class="p3-btn gold" id="mapBtn">地图</button>
     <span style="flex:1"></span>
-    <button class="btn" id="quality">高</button>
+    <button class="p3-btn" id="quality">高</button>
   </div>
   <div class="row" style="margin-bottom:5px">
     <span class="lbl">气血</span>
@@ -138,7 +150,7 @@
     <h3>舆图 · 灵界行记</h3>
     <span id="mapHint">点相邻且已解锁的节点即可前往</span>
     <span style="flex:1"></span>
-    <button class="btn" id="mapClose">收起</button>
+    <button class="p3-btn" id="mapClose">收起</button>
   </div>
   <div id="mapBody"><svg id="mapSvg"></svg></div>
 </div>
@@ -153,25 +165,56 @@
 
 <div class="hud" id="bottom">
   <div class="panel" id="log"></div>
+  <!-- 面板入口：3D 页复用 2D 的整套面板（js/ui.js），这几个按钮把面板叫出来 -->
+  <div class="p3tabs">
+    <button class="p3-btn" id="tabBag">行囊</button>
+    <button class="p3-btn" id="tabSkill">技能</button>
+    <button class="p3-btn" id="tabQuest">任务</button>
+    <button class="p3-btn" id="tabSocial">社交</button>
+    <button class="p3-btn" id="tabSet">设置</button>
+  </div>
   <div style="display:flex;gap:8px;align-items:flex-end">
-    <button class="btn" id="back2d">2D</button>
-    <button class="btn gold" id="fight">开战</button>
+    <button class="p3-btn" id="back2d">2D</button>
+    <button class="p3-btn gold" id="fight">开战</button>
   </div>
 </div>
+
+<!-- 2D 面板体系的宿主节点：js/ui.js 的 init() 需要这几个 id 才能工作
+     （面板容器 / 遮罩 / 弹窗 / 吐司）。顶栏与底部导航在 3D 页里隐藏 ——
+     3D 用自己那套 HUD 显示角色、气血、元神，避免信息重复与遮挡视野。 -->
+<div id="topbar" style="display:none"></div>
+<div id="nav" style="display:none"></div>
+<div class="sheet-mask" id="sheet-mask"></div>
+<div class="sheets" id="sheets"></div>
+<div class="modal-host" id="modal-host"></div>
+<div class="toast-host" id="toast-host"></div>
 
 <div id="loading"><div class="ring"></div><div id="ltxt">正在构筑洞天…</div><div id="lsub"></div></div>
 
 <script>
 /* 发布号从入口 URL 取（index.html 的「3D 试炼场 · 进入」会带 ?v=发布号）。
-   下面 data.js / core.js 与模块里的 GLB 模型都挂上它 —— 这样 3D 页整条资源链
-   都不会命中上一版缓存，而发布号仍然只有 index.html 的 CUR 一个来源。
-   用 document.write 是为了保持「先 data.js 再 core.js」的同步加载顺序。 */
+   下面所有脚本与模块里的 GLB 模型都挂上它 —— 3D 页整条资源链都不会命中上一版缓存，
+   而发布号仍然只有 index.html 的 CUR 一个来源。
+   用 document.write 是为了保住加载顺序：figure 依赖 hero-female / mob-art / hero_rig，
+   ui.js 依赖 core / data / figure 以及排在它前面的 Render 垫片。 */
 var LX_V = '';
 try { LX_V = new URLSearchParams(location.search).get('v') || ''; } catch (e) { }
 var LX_Q = LX_V ? ('?v=' + encodeURIComponent(LX_V)) : '';
-document.write('<script src="js/data.js' + LX_Q + '"><\/script>');
-document.write('<script src="js/core.js' + LX_Q + '"><\/script>');
+/* figure.js 的 ver() 靠它给素材挂版本号（2D 里由 index.html 提供同名的 CUR） */
+window.CUR = LX_V;
+[
+  'js/icons.js',          /* Lucide SVG sprite：图标一律 SVG，禁止 emoji */
+  'js/hero-female.js',    /* FIGURE 的女版立绘依赖 */
+  'js/mob-art.js',        /* FIGURE 的妖物形象依赖 */
+  'assets/hero_rig.js',   /* 立绘关节表（身体层 / 手臂层定位） */
+  'js/figure.js',         /* FIGURE：面板头像与装备图标要用 */
+  'js/data.js',
+  'js/core.js',
+  'js/render-lite.js',    /* 轻量 Render 垫片：ui.js 只依赖它的 6 个方法 */
+  'js/ui.js'              /* 2D 的整套面板体系，3D 页直接复用 */
+].forEach(function (f) { document.write('<script src="' + f + LX_Q + '"><\/script>'); });
 </script>
+<script>if (window.LUCIDE_SPRITE) document.body.insertAdjacentHTML('afterbegin', window.LUCIDE_SPRITE);</script>
 <script type="module">
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
@@ -1066,6 +1109,35 @@ el('fight').addEventListener('click', () => {
 });
 el('back2d').addEventListener('click', () => { location.href = 'index.html'; });
 el('fight').textContent = G.state.auto ? '停战' : '开战';
+
+/* ============================================================================
+   复用 2D 的面板体系（行囊 / 技能 / 任务 / 社交 / 设置 / 全部弹窗）
+   ---------------------------------------------------------------------------
+   js/ui.js 与 2D 版是同一份代码、同一份存档，靠 js/render-lite.js 垫片在 3D 页跑起来。
+   必须等游戏状态就绪后再 init —— 否则面板首次渲染拿到的是空数据。
+   ========================================================================== */
+try {
+  if (window.UI && typeof UI.init === 'function') {
+    UI.init();
+    const PANELS = {
+      tabBag: () => UI.openSheet('bag'),
+      tabSkill: () => UI.openSheet('skill'),
+      tabQuest: () => UI.openSheet('quest'),
+      tabSocial: () => UI.openSheet('social'),
+      tabSet: () => UI.openSettings()
+    };
+    Object.keys(PANELS).forEach(id => {
+      const b = el(id);
+      if (b) b.addEventListener('click', PANELS[id]);
+    });
+    /* 面板开着时数值要跟着挂机走：ui.js 的软刷新带签名去重，重复调用很便宜 */
+    setInterval(() => { try { UI.softRefresh && UI.softRefresh(); } catch (e) { } }, 1000);
+  } else {
+    console.warn('[3D] 未找到 UI，面板入口不可用');
+  }
+} catch (e) {
+  console.warn('[3D] 面板体系初始化失败：', e);
+}
 
 /* ============================================================================
    舆图 · 灵界行记 —— 把八个区域织成一张可走位的地图
