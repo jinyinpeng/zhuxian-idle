@@ -1046,7 +1046,9 @@
         '<div class="set-row">' +
           '<div class="s-main"><div class="s-name">3D 试炼场</div>' +
           '<div class="s-desc">实时 3D 战斗场景（动态光影 / 粒子 / 自由相机），独立入口</div></div>' +
-          '<button class="btn sm gold" onclick="location.href=\'play3d.html\'">进入</button>' +
+          /* 入口带上发布号：play3d.html 是独立页面，不加 ?v= 会被浏览器缓存约 10 分钟，
+             导致回访玩家进入的是上一版 3D 页（版本号由 index.html 的 CUR 统一出口提供）。 */
+          '<button class="btn sm gold" onclick="location.href=\'play3d.html?v=\'+(window.__VER||\'\')">进入</button>' +
         '</div>' +
         '<div class="set-row">' +
           '<div class="s-main"><div class="s-name">游戏音乐</div><div class="s-desc">仙侠背景音乐 · 可一键开关</div></div>' +

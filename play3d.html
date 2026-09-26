@@ -157,8 +157,17 @@
 
 <div id="loading"><div class="ring"></div><div id="ltxt">正在构筑洞天…</div><div id="lsub"></div></div>
 
-<script src="js/data.js"></script>
-<script src="js/core.js"></script>
+<script>
+/* 发布号从入口 URL 取（index.html 的「3D 试炼场 · 进入」会带 ?v=发布号）。
+   下面 data.js / core.js 与模块里的 GLB 模型都挂上它 —— 这样 3D 页整条资源链
+   都不会命中上一版缓存，而发布号仍然只有 index.html 的 CUR 一个来源。
+   用 document.write 是为了保持「先 data.js 再 core.js」的同步加载顺序。 */
+var LX_V = '';
+try { LX_V = new URLSearchParams(location.search).get('v') || ''; } catch (e) { }
+var LX_Q = LX_V ? ('?v=' + encodeURIComponent(LX_V)) : '';
+document.write('<script src="js/data.js' + LX_Q + '"><\/script>');
+document.write('<script src="js/core.js' + LX_Q + '"><\/script>');
+</script>
 <script type="module">
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
@@ -594,12 +603,21 @@ el('ltxt').textContent = '正在构筑洞天…';
 /* 模型分两档：低画质用简化版（每个约 0.5MB，三角形只有 1/3、贴图 512），
    中高档用标准版（约 4MB）。切换画质跨过 0 档时重新加载 —— 低端机最需要的就是这一份。 */
 let modelTier = -1;
+/* 模型 URL 也挂发布号：模型换过好几轮（高精/简化两档），
+   不加版本参数会被缓存住，玩家看到的还是上一版的妖兽与主角。 */
+function LXQ() {
+  try {
+    const v = new URLSearchParams(location.search).get('v');
+    return v ? ('?v=' + encodeURIComponent(v)) : '';
+  } catch (e) { return ''; }
+}
 function loadModels() {
   const lq = tier === 0;
   if (modelTier === (lq ? 0 : 1)) return;
   modelTier = lq ? 0 : 1;
   const sfx = lq ? '_lq' : '';
-  loadGLB('assets/models/hero_cultivator' + sfx + '.glb', scene2 => {
+  const V = LXQ();
+  loadGLB('assets/models/hero_cultivator' + sfx + '.glb' + V, scene2 => {
     standardize(scene2, 3.55);
     if (heroPivot) heroRoot.remove(heroPivot);
     if (heroFallback && heroFallback.parentNode) heroRoot.remove(heroFallback);
@@ -611,7 +629,7 @@ function loadModels() {
     setTimeout(() => { el('lsub').textContent = ''; }, 1600);
   });
   ['beast', 'demon', 'ghost'].forEach(k => {
-    loadGLB('assets/models/' + k + sfx + '.glb', scene2 => {
+    loadGLB('assets/models/' + k + sfx + '.glb' + V, scene2 => {
       standardize(scene2, MOB_H[k]);
       mobTpls[k] = scene2;
     });
