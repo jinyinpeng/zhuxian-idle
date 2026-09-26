@@ -468,22 +468,33 @@ function loadGLB(url, onOk) {
     () => { el('lsub').textContent = ''; });
 }
 el('ltxt').textContent = '正在构筑洞天…';
-loadGLB('assets/models/hero_cultivator.glb?v=' + (window.__VER || ''), scene2 => {
-  standardize(scene2, 3.55);
-  heroPivot = new THREE.Group();
-  heroPivot.add(scene2);
-  heroRoot.add(heroPivot);
-  if (heroFallback) heroRoot.remove(heroFallback);
-  heroModel = heroPivot;
-  el('lsub').textContent = '主角模型已载入';
-  setTimeout(() => { el('lsub').textContent = ''; }, 1600);
-});
-['beast', 'demon', 'ghost'].forEach(k => {
-  loadGLB('assets/models/' + k + '.glb', scene2 => {
-    standardize(scene2, MOB_H[k]);
-    mobTpls[k] = scene2;                 /* 之后该种妖物出场就用模型 */
+/* 模型分两档：低画质用简化版（每个约 0.5MB，三角形只有 1/3、贴图 512），
+   中高档用标准版（约 4MB）。切换画质跨过 0 档时重新加载 —— 低端机最需要的就是这一份。 */
+let modelTier = -1;
+function loadModels() {
+  const lq = tier === 0;
+  if (modelTier === (lq ? 0 : 1)) return;
+  modelTier = lq ? 0 : 1;
+  const sfx = lq ? '_lq' : '';
+  loadGLB('assets/models/hero_cultivator' + sfx + '.glb', scene2 => {
+    standardize(scene2, 3.55);
+    if (heroPivot) heroRoot.remove(heroPivot);
+    if (heroFallback && heroFallback.parentNode) heroRoot.remove(heroFallback);
+    heroPivot = new THREE.Group();
+    heroPivot.add(scene2);
+    heroRoot.add(heroPivot);
+    heroModel = heroPivot;
+    el('lsub').textContent = '主角模型已载入' + (lq ? '（简化版）' : '');
+    setTimeout(() => { el('lsub').textContent = ''; }, 1600);
   });
-});
+  ['beast', 'demon', 'ghost'].forEach(k => {
+    loadGLB('assets/models/' + k + sfx + '.glb', scene2 => {
+      standardize(scene2, MOB_H[k]);
+      mobTpls[k] = scene2;
+    });
+  });
+}
+
 
 /* ---------- 6. 粒子 / 冲击波 ---------- */
 const PMAX = 320;
@@ -814,6 +825,7 @@ function applyTier() {
   buildComposer();
   layoutProps(20260926);
   el('quality').textContent = TIERS[tier].n;
+  loadModels();          /* 跨过低画质档就换用/换回简化模型 */
   document.querySelectorAll('.badge').forEach(b => { b.style.borderColor = 'rgba(250,204,21,.35)'; });
 }
 el('quality').addEventListener('click', () => {
