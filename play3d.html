@@ -331,23 +331,118 @@ heroRoot.add(heroFallback);
 let mobTpl = null, mobTplReady = false;
 const mobMeshes = new Map();
 const mobColors = { beast: 0x6b4a2e, demon: 0x6d2545, ghost: 0x9fd8d0 };
-function buildFallbackMob(kind) {
+/* 三种妖物的形体（程序化搭建，但按"生物结构"搭，而不是一根胶囊）：
+     岩甲兽 · 低伏重型四足，背脊岩板，双角，琥珀眼
+     血魇   · 驼背双足，长臂垂地，宽颚骨面，血瞳
+     幽魄   · 飘浮无足，斗篷残边，细长双臂，空洞冷瞳
+   每种都带：躯干分段 / 关节腿（有大小腿）/ 尾 / 背脊 / 眼部自发光。 */
+const EYE_MAT = {};
+function eyeMat(color) {
+  if (!EYE_MAT[color]) EYE_MAT[color] = new THREE.MeshStandardMaterial({
+    color, emissive: color, emissiveIntensity: 3.2, roughness: 0.3
+  });
+  return EYE_MAT[color];
+}
+function skin(color, rough, flat) {
+  return new THREE.MeshStandardMaterial({ color, roughness: rough == null ? 0.86 : rough,
+    metalness: 0.05, flatShading: !!flat });
+}
+function part(g, geo, m, x, y, z, rx, ry, rz) {
+  const o = new THREE.Mesh(geo, m);
+  o.position.set(x, y, z);
+  if (rx || ry || rz) o.rotation.set(rx || 0, ry || 0, rz || 0);
+  o.castShadow = tier >= 1; o.receiveShadow = true;
+  g.add(o);
+  return o;
+}
+function buildBeast() {
   const g = new THREE.Group();
-  const col = mobColors[kind] || mobColors.beast;
-  const m = new THREE.MeshStandardMaterial({ color: col, roughness: 0.82, flatShading: true });
-  const body = new THREE.Mesh(new THREE.CapsuleGeometry(0.62, 1.05, 6, 14), m);
-  body.rotation.z = Math.PI / 2; body.position.y = 1.15; body.castShadow = tier >= 1; g.add(body);
-  const head = new THREE.Mesh(new THREE.IcosahedronGeometry(0.5, 1), m);
-  head.position.set(-0.98, 1.42, 0); head.castShadow = tier >= 1; g.add(head);
-  const eyeM = new THREE.MeshStandardMaterial({ color: 0xff5a5a, emissive: 0xff2d2d, emissiveIntensity: 2.6 });
-  [-0.2, 0.2].forEach(z => { const e = new THREE.Mesh(new THREE.SphereGeometry(0.1, 10, 8), eyeM);
-    e.position.set(-1.34, 1.5, z); g.add(e); });
-  for (let i = 0; i < 4; i++) {
-    const leg = new THREE.Mesh(new THREE.CapsuleGeometry(0.13, 0.62, 4, 8),
-      new THREE.MeshStandardMaterial({ color: 0x2a2622, roughness: 0.86 }));
-    leg.position.set(-0.6 + (i % 2) * 1.2, 0.42, i < 2 ? 0.4 : -0.4);
-    leg.castShadow = tier >= 1; g.add(leg);
+  const hide = skin(0x5c4630), dark = skin(0x2f2822), rock = skin(0x6a6f77, 0.95, true);
+  const torso = part(g, new THREE.CapsuleGeometry(0.62, 1.15, 6, 14), hide, 0, 1.12, 0, 0, 0, Math.PI / 2);
+  torso.scale.set(1, 1, 1.08);
+  part(g, new THREE.SphereGeometry(0.66, 14, 10), hide, 0.62, 1.2, 0);      /* 后臀 */
+  part(g, new THREE.SphereGeometry(0.58, 14, 10), hide, -0.72, 1.3, 0);     /* 前胸 */
+  for (let i = 0; i < 5; i++) {                                            /* 背脊岩板 */
+    const s = 0.34 - Math.abs(i - 2) * 0.045;
+    const p = part(g, new THREE.ConeGeometry(s, s * 1.5, 5), rock,
+      -0.5 + i * 0.36, 1.78 + (i === 2 ? 0.07 : 0), 0);
+    p.rotation.z = -0.12 + i * 0.05;
   }
+  const neck = part(g, new THREE.CapsuleGeometry(0.26, 0.42, 4, 10), hide, -1.02, 1.42, 0, 0, 0, 1.15);
+  const head = new THREE.Group();
+  head.position.set(-1.44, 1.46, 0);
+  g.add(head);
+  part(head, new THREE.BoxGeometry(0.62, 0.42, 0.46), hide, 0, 0, 0);       /* 头骨 */
+  part(head, new THREE.BoxGeometry(0.34, 0.2, 0.34), dark, -0.44, -0.08, 0);/* 吻部 */
+  part(head, new THREE.ConeGeometry(0.09, 0.34, 5), dark, -0.62, -0.06, 0, 0, 0, -1.5);
+  [-0.16, 0.16].forEach(z => part(head, new THREE.ConeGeometry(0.08, 0.36, 5), dark, -0.1, 0.3, z, -0.3, 0, 0)); /* 双角 */
+  [-0.13, 0.13].forEach(z => part(head, new THREE.ConeGeometry(0.06, 0.16, 5), dark, -0.24, -0.16, z, 1.4, 0, 0)); /* 獠牙 */
+  [-0.17, 0.17].forEach(z => part(head, new THREE.SphereGeometry(0.075, 10, 8), eyeMat(0xffb020), -0.2, 0.06, z));
+  [-1, 1].forEach(s => [0.42, -0.5].forEach(x => {                          /* 四条关节腿 */
+    const hip = part(g, new THREE.CapsuleGeometry(0.15, 0.34, 4, 8), dark, x, 0.95, s * 0.42, 0, 0, 0.2 * s);
+    part(g, new THREE.CapsuleGeometry(0.11, 0.4, 4, 8), dark, x + 0.06 * s, 0.5, s * 0.44);
+    part(g, new THREE.SphereGeometry(0.15, 10, 8), dark, x + 0.06 * s, 0.2, s * 0.44);
+  }));
+  const tail = part(g, new THREE.CapsuleGeometry(0.11, 0.8, 4, 8), hide, 1.34, 1.34, 0, 0, 0, 1.05);
+  part(g, new THREE.ConeGeometry(0.15, 0.3, 6), dark, 1.75, 1.52, 0, 0, 0, 1.2);
+  g.userData.head = head; g.userData.neck = neck; g.userData.tail = tail; g.userData.swing = 0;
+  g.userData.h = 2.2;
+  return g;
+}
+function buildDemon() {
+  const g = new THREE.Group();
+  const flesh = skin(0x5d1f31, 0.9), bone = skin(0x2a1a20, 0.95, true);
+  part(g, new THREE.CapsuleGeometry(0.5, 0.9, 6, 14), flesh, 0, 1.55, 0, 0, 0, 0.12);  /* 驼背躯干 */
+  part(g, new THREE.SphereGeometry(0.52, 14, 10), flesh, 0.1, 1.05, 0);
+  const head = new THREE.Group(); head.position.set(-0.34, 2.2, 0); g.add(head);
+  part(head, new THREE.BoxGeometry(0.5, 0.44, 0.44), bone, 0, 0, 0);
+  part(head, new THREE.BoxGeometry(0.4, 0.24, 0.36), bone, -0.36, -0.12, 0);
+  [-0.14, 0.14].forEach(z => part(head, new THREE.ConeGeometry(0.09, 0.44, 5), bone, 0.06, 0.34, z, -0.35, 0, 0));
+  [-0.2, 0.2].forEach(z => part(head, new THREE.SphereGeometry(0.072, 10, 8), eyeMat(0xff2d2d), -0.2, 0.04, z));
+  [-1, 1].forEach(s => {                                                    /* 长臂垂地 */
+    part(g, new THREE.CapsuleGeometry(0.13, 0.7, 4, 8), flesh, 0.06, 1.6, s * 0.46, 0, 0, 0.18 * s);
+    part(g, new THREE.CapsuleGeometry(0.11, 0.66, 4, 8), flesh, -0.14, 0.95, s * 0.5, 0.2, 0, 0.1 * s);
+    for (let k = 0; k < 3; k++) part(g, new THREE.ConeGeometry(0.045, 0.26, 5), bone, -0.3, 0.6, s * (0.4 + k * 0.1), 1.5, 0, 0);
+  });
+  [-1, 1].forEach(s => {                                                    /* 反曲后腿 */
+    part(g, new THREE.CapsuleGeometry(0.15, 0.44, 4, 8), flesh, 0.08, 0.9, s * 0.3, 0, 0, 0.3 * s);
+    part(g, new THREE.CapsuleGeometry(0.12, 0.5, 4, 8), bone, 0.02, 0.4, s * 0.32);
+    part(g, new THREE.BoxGeometry(0.34, 0.12, 0.24), bone, -0.12, 0.08, s * 0.32);
+  });
+  g.userData.head = head; g.userData.swing = 0; g.userData.h = 2.6;
+  return g;
+}
+function buildGhost() {
+  const g = new THREE.Group();
+  const cloth = new THREE.MeshStandardMaterial({ color: 0x9fded6, roughness: 0.7,
+    transparent: true, opacity: 0.82, emissive: 0x123c3a, emissiveIntensity: 0.7, side: THREE.DoubleSide });
+  const dark = skin(0x1d3b3a, 0.9);
+  part(g, new THREE.ConeGeometry(0.62, 2.1, 12, 1, true), cloth, 0, 1.35, 0, Math.PI, 0, 0);   /* 斗篷 */
+  for (let i = 0; i < 7; i++)                                                                /* 残破下摆 */
+    part(g, new THREE.ConeGeometry(0.14, 0.5 + Math.random() * 0.4, 4), cloth,
+      Math.cos(i / 7 * 6.283) * 0.5, 0.34, Math.sin(i / 7 * 6.283) * 0.5, Math.PI, 0, 0);
+  const head = new THREE.Group(); head.position.set(0, 2.1, 0); g.add(head);
+  part(head, new THREE.SphereGeometry(0.34, 14, 12), cloth, 0, 0, 0);
+  part(head, new THREE.CylinderGeometry(0.36, 0.3, 0.34, 12, 1, true), cloth, 0, 0.12, 0);
+  [-0.13, 0.13].forEach(z => part(head, new THREE.SphereGeometry(0.07, 10, 8), eyeMat(0x7ffbe8), -0.24, -0.02, z));
+  [-1, 1].forEach(s => {                                                                     /* 细长双臂 */
+    part(g, new THREE.CapsuleGeometry(0.07, 0.62, 4, 8), cloth, 0.1, 1.55, s * 0.5, 0, 0, 0.3 * s);
+    part(g, new THREE.CapsuleGeometry(0.055, 0.6, 4, 8), cloth, -0.14, 0.95, s * 0.56, 0.3, 0, 0.16 * s);
+    for (let k = 0; k < 3; k++) part(g, new THREE.ConeGeometry(0.03, 0.2, 5), cloth, -0.3, 0.58, s * (0.46 + k * 0.08), 1.6, 0, 0);
+  });
+  g.userData.head = head; g.userData.swing = 0; g.userData.h = 2.5; g.userData.float = true;
+  return g;
+}
+function buildFallbackMob(kind) {
+  const g = kind === 'demon' ? buildDemon() : kind === 'ghost' ? buildGhost() : buildBeast();
+  /* 落地接触影：一张贴地的暗斑，比实时阴影便宜得多，也让怪物"压在地上" */
+  const sh = new THREE.Mesh(new THREE.CircleGeometry(0.95, 20),
+    new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.42,
+      depthWrite: false, blending: THREE.NormalBlending }));
+  sh.rotation.x = -Math.PI / 2; sh.position.y = 0.03;
+  sh.scale.set(1.15, 0.75, 1);
+  g.add(sh);
+  g.userData.shadowBlob = sh;
   return g;
 }
 
@@ -370,9 +465,8 @@ loadGLB('assets/models/hero_cultivator.glb?v=' + (window.__VER || ''), scene2 =>
   setTimeout(() => { el('lsub').textContent = ''; }, 1600);
 });
 loadGLB('assets/models/beast.glb', scene2 => {
-  standardize(scene2, 1.9);
-  mobTpl = scene2; mobTplReady = true;
-  [...mobMeshes.values()].forEach(gr => { if (gr.userData.fallback) rebuildMob(gr); });
+  standardize(scene2, 2.15);
+  mobTpl = scene2; mobTplReady = true;      /* 之后新出场的岩甲兽直接用模型 */
 });
 
 /* ---------- 6. 粒子 / 冲击波 ---------- */
@@ -463,15 +557,13 @@ function syncMobs() {
     alive.add(m.idx);
     let gr = mobMeshes.get(m.idx);
     if (!gr) {
-      gr = new THREE.Group();
-      gr.userData.fallback = true;
-      gr.add(buildFallbackMob(['beast', 'demon', 'ghost'][m.idx % 3]));
+      const kind = ['beast', 'demon', 'ghost'][m.idx % 3];
+      gr = makeMob(kind);
       const p = mobPosOf(m);
       gr.position.set(p.x, 0, p.z);
-      gr.rotation.y = 1.2;
       scene.add(gr);
       mobMeshes.set(m.idx, gr);
-      addLog('妖物现身', '');
+      addLog('妖物「' + ({ beast: '岩甲兽', demon: '血魇', ghost: '幽魄' }[kind]) + '」现身', '');
     }
     const p = mobPosOf(m);
     gr.position.x += (p.x - gr.position.x) * 0.06;
@@ -487,6 +579,63 @@ function syncMobs() {
 function mobAnchor(idx) {
   const gr = mobMeshes.get(idx);
   return gr ? gr.position : new THREE.Vector3(-3.4, 0, 0);
+}
+/* 造一只怪：优先用 GLB（岩甲兽），其余用程序化形体。
+   无论哪种，都在组级别挂一张贴地暗斑 —— 怪物必须"压在地上"才像活的。 */
+function makeMob(kind) {
+  const gr = new THREE.Group();
+  let inner;
+  if (kind === 'beast' && mobTplReady) {
+    inner = mobTpl.clone(true);
+    inner.scale.multiplyScalar(0.66);
+  } else {
+    inner = buildFallbackMob(kind);
+  }
+  gr.add(inner);
+  const sh = new THREE.Mesh(new THREE.CircleGeometry(1.0, 20),
+    new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.4, depthWrite: false }));
+  sh.rotation.x = -Math.PI / 2; sh.position.y = 0.03; sh.scale.set(1.2, 0.8, 1);
+  gr.add(sh);
+  gr.userData.inner = inner; gr.userData.shadowBlob = sh; gr.userData.kind = kind;
+  gr.userData.spring = 0; gr.userData.lunge = 0; gr.userData.recoil = 0;
+  gr.userData.sway = Math.random() * 6.28;
+  gr.scale.setScalar(0.01);
+  return gr;
+}
+/* 每帧的怪物行为：出场弹起 → 面向主角 → 呼吸 → 扑击 → 受击后退 */
+function updateMobs(dt, now) {
+  const hp = heroRoot.position;
+  mobMeshes.forEach(gr => {
+    const u = gr.userData;
+    u.spring = Math.min(1, u.spring + dt * 2.4);
+    const s = u.spring * u.spring * (3 - 2 * u.spring);           /* smoothstep 弹出 */
+    gr.scale.setScalar(s);
+    const breathe = Math.sin(now * 0.0026 + u.sway) * 0.04;
+    const float = u.kind === 'ghost' ? Math.sin(now * 0.0019 + u.sway) * 0.15 + 0.22 : 0;
+    gr.position.y = breathe + float;
+    /* 面向主角（不面向玩家的妖物看起来就是道具） */
+    const tgt = Math.atan2(hp.x - gr.position.x, hp.z - gr.position.z);
+    let d = tgt - gr.rotation.y;
+    while (d > Math.PI) d -= 6.2832;
+    while (d < -Math.PI) d += 6.2832;
+    gr.rotation.y += d * Math.min(1, dt * 4.5);
+    /* 抬头 / 低头：扑击时猛探，平时轻微呼吸 */
+    const head = u.inner && u.inner.userData && u.inner.userData.head;
+    if (head) head.rotation.z = Math.sin(now * 0.0022 + u.sway) * 0.07 - u.lunge * 0.6;
+    if (u.lunge > 0) {
+      u.lunge = Math.max(0, u.lunge - dt / 0.36);
+      const k = Math.sin(u.lunge * Math.PI);
+      gr.position.x += Math.sin(gr.rotation.y) * k * 1.35 * dt * 6;
+      gr.position.z += Math.cos(gr.rotation.y) * k * 1.35 * dt * 6;
+      gr.rotation.x = -k * 0.22;
+    } else gr.rotation.x *= 0.86;
+    if (u.recoil > 0) {
+      u.recoil = Math.max(0, u.recoil - dt / 0.22);
+      gr.position.x -= Math.sin(gr.rotation.y) * u.recoil * 0.9;
+      gr.rotation.x = u.recoil * 0.16;
+    }
+    if (u.shadowBlob) u.shadowBlob.material.opacity = 0.4 * s;
+  });
 }
 
 /* ---------- 8. 姿态：核心是"把剑举起来"再劈下去 ---------- */
@@ -526,6 +675,8 @@ G.on('damage', d => {
   if (d.heal) { spawnParticles(heroRoot.position, 16, '#4ade80', 1.1, true); addLog('回复 <b>+' + G.fmt(d.amount) + '</b>', ''); return; }
   if (d.side === 'mob') {
     const a = mobAnchor(d.idx || 0);
+    const hitGr = mobMeshes.get(d.idx || 0);
+    if (hitGr) hitGr.userData.recoil = 1;      /* 挨打往后一顿 */
     spawnParticles(a, d.crit ? 22 : 11, d.crit ? '#fde047' : SECT.color, 2.2, true);
     shockwave(a, d.crit ? '#fde047' : SECT.color, d.crit ? 2.8 : 1.8);
     addLog((d.crit ? '暴击 ' : '') + '<span class="hit">-' + G.fmt(d.amount) + '</span>', '');
@@ -535,7 +686,11 @@ G.on('damage', d => {
     addLog('受击 <span class="hit">-' + G.fmt(d.amount) + '</span>', '');
   }
 });
-G.on('mobAttack', e => { if (e && e.idx != null) pose.hit = 0.26; });
+G.on('mobAttack', e => {
+  pose.hit = 0.26;
+  const gr = e && e.idx != null ? mobMeshes.get(e.idx) : null;
+  if (gr) gr.userData.lunge = 1;          /* 出手的怪猛地扑向主角 */
+});
 
 /* ---------- 10. 区域：用 core.js 的 REGIONS，切场景配色 ---------- */
 const regionSel = el('region');
@@ -641,7 +796,7 @@ function loop(now) {
   stepParticles(dt);
   stepRings(dt);
   hud(dt);
-  mobMeshes.forEach(gr => { gr.position.y = Math.abs(Math.sin(now * 0.0028)) * 0.06; });
+  updateMobs(dt, now);
   const cx = mobMeshes.size ? [...mobMeshes.values()].reduce((a, g) => a + g.position.x, 0) / mobMeshes.size : heroRoot.position.x;
   controls.target.lerp(new THREE.Vector3((heroRoot.position.x + cx) * 0.32, 2.05, 0), 0.035);
   controls.update();
