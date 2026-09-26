@@ -246,6 +246,15 @@ if (!G.state || !G.state.sect) {
   const gender = q.get('gender') || 'female';
   G.createCharacter(q.get('name') || '无名散修', sect, gender);
 }
+/* ---------- 0.5 离线收益（与 2D 版同一套算法：core.js 的 offlineApply） ----------
+   3D 页此前漏了这一步 —— 隔夜再进、或从 2D 切到 3D，离线收益根本不会被结算。
+   必须在任何 G.save() 之前取：save() 会把 lastSave 刷新成当前时间，那样收益就归零了。
+   面板体系（UI）在下面才初始化，所以先把结果存起来，等 UI.init() 之后再弹窗。 */
+let offlineRep = null;
+try {
+  offlineRep = G.offlineApply((Date.now() - (G.state.lastSave || Date.now())) / 1000);
+} catch (e) { /* 结算失败不影响进游戏 */ }
+
 const SECT = G.sectOf(G.state.sect) || { name: '青云门', color: '#5eead4' };
 const COL = new THREE.Color(SECT.color || '#5eead4');
 document.documentElement.dataset.sect = G.state.sect;
@@ -1107,7 +1116,11 @@ el('fight').addEventListener('click', () => {
   addLog(on ? '开始挂机' : '已停战', 'sk');
   try { window.Music && Music.start && Music.start(); } catch (e) { }
 });
-el('back2d').addEventListener('click', () => { location.href = 'index.html'; });
+/* 2D 完整版现在叫 game2d.html（index.html 已改为默认进 3D 的入口页） */
+el('back2d').addEventListener('click', () => {
+  const v = (typeof LX_V !== 'undefined' && LX_V) ? ('?v=' + encodeURIComponent(LX_V)) : '';
+  location.href = 'game2d.html' + v;
+});
 el('fight').textContent = G.state.auto ? '停战' : '开战';
 
 /* ============================================================================
@@ -1137,6 +1150,37 @@ try {
   }
 } catch (e) {
   console.warn('[3D] 面板体系初始化失败：', e);
+}
+
+/* 离线收益弹窗：结算在上面「起号之后」就做完了（必须在 save() 之前），
+   这里只是等面板体系就绪后再弹，避免弹窗抢在 init 前面。 */
+if (offlineRep) {
+  setTimeout(() => {
+    try { UI.openOffline(offlineRep); } catch (e) { console.warn('[3D] 离线弹窗失败：', e); }
+  }, 700);
+}
+
+/* ============================================================================
+   自动更新到最新版（与 2D 版 index.html 同一机制）
+   ---------------------------------------------------------------------------
+   3D 是独立页面，必须自己也能发现新版本 —— 否则从 3D 进来的人会一直停在旧版。
+   只在「知道自己属于哪一版」时才轮询（URL 带 ?v= 才有 LX_V）：
+   裸开 /play3d.html 时 LX_V 为空，若照常比对会因 '' ≠ 线上版本而无限刷新。
+   ========================================================================== */
+if (LX_V) {
+  const checkVer = () => {
+    fetch('version.json?t=' + Date.now(), { cache: 'no-store' })
+      .then(r => (r.ok ? r.json() : null))
+      .then(j => {
+        if (!j || !j.v || j.v === LX_V) return;
+        try { toast('发现新版本，正在更新…', '#facc15'); } catch (e) { }
+        setTimeout(() => location.replace(location.pathname + '?v=' + encodeURIComponent(j.v)), 700);
+      })
+      .catch(() => { });
+  };
+  setInterval(checkVer, 30000);
+  document.addEventListener('visibilitychange', () => { if (!document.hidden) checkVer(); });
+  window.addEventListener('pageshow', e => { if (e.persisted) checkVer(); });
 }
 
 /* ============================================================================
