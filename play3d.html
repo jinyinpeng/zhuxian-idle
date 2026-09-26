@@ -55,6 +55,40 @@
   #hint { position:fixed; left:50%; bottom:calc(74px + env(safe-area-inset-bottom)); transform:translateX(-50%);
     z-index:5; font-size:11px; color:#a8a29e; background:rgba(10,14,20,.5); padding:4px 10px;
     border-radius:999px; transition:opacity .4s; }
+  /* ---------- 地图：节点图 ---------- */
+  #mapWrap { position:fixed; inset:0; z-index:8; display:none; background:rgba(4,6,10,.82);
+    backdrop-filter:blur(7px); padding:calc(14px + env(safe-area-inset-top)) 14px calc(14px + env(safe-area-inset-bottom)); }
+  #mapWrap.on { display:flex; flex-direction:column; }
+  #mapHead { display:flex; align-items:center; gap:10px; margin-bottom:10px; }
+  #mapHead h3 { margin:0; font-size:15px; font-weight:600; }
+  #mapHint { font-size:11.5px; color:#a8a29e; }
+  #mapBody { flex:1; min-height:0; position:relative; overflow:hidden; }
+  #mapSvg { position:absolute; inset:0; width:100%; height:100%; }
+  #mapBody .node { position:absolute; transform:translate(-50%,-50%); text-align:center; cursor:pointer; }
+  #mapBody .dot { width:26px; height:26px; margin:0 auto 4px; border-radius:50%;
+    border:2px solid rgba(255,255,255,.35); background:rgba(12,16,22,.9);
+    display:flex; align-items:center; justify-content:center; font-size:12px; }
+  #mapBody .nm { font-size:11.5px; white-space:nowrap; color:#d6d3d1; }
+  #mapBody .lv { font-size:10px; color:#78716c; }
+  #mapBody .node.here .dot { border-color:#facc15; box-shadow:0 0 0 3px rgba(250,204,21,.25), 0 0 18px rgba(250,204,21,.5); }
+  #mapBody .node.here .nm { color:#facc15; font-weight:600; }
+  #mapBody .node.found .dot { border-color:rgba(94,234,212,.75); }
+  #mapBody .node.known:not(.found) .dot { border-style:dashed; opacity:.7; }
+  #mapBody .node.lock { opacity:.4; cursor:not-allowed; }
+  #mapBody .node.lock .nm::after { content:' 🔒'; }
+  /* ---------- 奇遇弹窗 ---------- */
+  #encWrap { position:fixed; inset:0; z-index:9; display:none; align-items:center; justify-content:center;
+    background:rgba(4,6,10,.7); padding:20px; }
+  #encWrap.on { display:flex; }
+  #encBox { width:min(92vw,420px); background:linear-gradient(180deg,rgba(24,20,18,.98),rgba(12,10,9,.99));
+    border:1px solid rgba(250,204,21,.35); border-radius:16px; padding:16px; }
+  #encTitle { font-size:15px; font-weight:600; color:#facc15; margin-bottom:8px; }
+  #encText { font-size:13px; line-height:1.7; color:#d6d3d1; margin-bottom:12px; }
+  .encChoice { display:block; width:100%; text-align:left; margin-bottom:7px; padding:10px 12px;
+    border:1px solid rgba(255,255,255,.16); background:rgba(10,14,20,.6); color:#e7e5e4;
+    border-radius:10px; font-size:12.5px; }
+  .encChoice:hover { border-color:rgba(250,204,21,.5); color:#facc15; }
+  .encChoice em { font-style:normal; color:#a8a29e; font-size:11px; }
   #loading { position:fixed; inset:0; z-index:9; display:flex; align-items:center; justify-content:center;
     flex-direction:column; gap:12px; background:#06080c; transition:opacity .6s; }
   #loading.done { opacity:0; pointer-events:none; }
@@ -78,6 +112,7 @@
     <span class="badge" id="bName">—</span>
     <span class="badge" id="bLv">Lv.1</span>
     <select class="btn" id="region"></select>
+    <button class="btn gold" id="mapBtn">地图</button>
     <span style="flex:1"></span>
     <button class="btn" id="quality">高</button>
   </div>
@@ -93,6 +128,24 @@
 <div id="hint">拖动旋转视角 · 滚轮／双指缩放 · 点「开战」自动挂机</div>
 <div id="toast"></div>
 <div id="floaters"></div>
+
+<div id="mapWrap">
+  <div id="mapHead">
+    <h3>舆图 · 灵界行记</h3>
+    <span id="mapHint">点相邻且已解锁的节点即可前往</span>
+    <span style="flex:1"></span>
+    <button class="btn" id="mapClose">收起</button>
+  </div>
+  <div id="mapBody"><svg id="mapSvg"></svg></div>
+</div>
+
+<div id="encWrap">
+  <div id="encBox">
+    <div id="encTitle">奇遇</div>
+    <div id="encText"></div>
+    <div id="encChoices"></div>
+  </div>
+</div>
 
 <div class="hud" id="bottom">
   <div class="panel" id="log"></div>
@@ -791,6 +844,17 @@ function applyPose(dt) {
   }
   if (pose.swing > 0) pose.swing = Math.max(0, pose.swing - dt / 0.24);
   if (pose.hit > 0) pose.hit -= dt;
+  /* 走位：真的"走"过去 —— 前倾 + 上下起伏 + 轻微左右摆，比瞬间换场景可信 */
+  if (walking > 0) {
+    walking -= dt;
+    const k = Math.min(1, walking / 0.9);
+    const step = Math.sin((0.9 - walking) * 16);
+    heroRoot.rotation.x = -0.18 * k;
+    heroRoot.position.y += Math.abs(step) * 0.09 * k;
+    heroRoot.rotation.z += step * 0.05 * k;
+    heroRoot.position.x += 0.5 * dt * k;
+    if (walking <= 0) heroRoot.position.x = 2.6;
+  }
 }
 
 /* ---------- 9. 事件：全部来自 core.js，与 2D 版同一批 ---------- */
@@ -981,6 +1045,212 @@ el('fight').addEventListener('click', () => {
 el('back2d').addEventListener('click', () => { location.href = 'index.html'; });
 el('fight').textContent = G.state.auto ? '停战' : '开战';
 
+/* ============================================================================
+   舆图 · 灵界行记 —— 把八个区域织成一张可走位的地图
+   节点图 + 解锁条件（等级 / 相邻）+ 加权奇遇 + 二选一分支。
+   存档单独放一个 key（zx_map），不动 2D 版那份存档，零风险。
+   ========================================================================== */
+const NODES = [
+  { id: 'n01', name: '青云山脚', region: 'r01', x: 12, y: 76, lv: 1,   links: ['n02', 'n03'] },
+  { id: 'n02', name: '后山竹林', region: 'r01', x: 26, y: 62, lv: 3,   links: ['n01', 'n04'] },
+  { id: 'n03', name: '幽泉谷口', region: 'r02', x: 22, y: 34, lv: 10,  links: ['n01', 'n05'] },
+  { id: 'n04', name: '万蝠古窟', region: 'r03', x: 42, y: 78, lv: 22,  links: ['n02', 'n06'] },
+  { id: 'n05', name: '幽泉深处', region: 'r02', x: 34, y: 20, lv: 16,  links: ['n03', 'n07'] },
+  { id: 'n06', name: '焚香谷外', region: 'r04', x: 56, y: 64, lv: 36,  links: ['n04', 'n08'] },
+  { id: 'n07', name: '死亡沼泽', region: 'r05', x: 50, y: 12, lv: 50,  links: ['n05', 'n09'] },
+  { id: 'n08', name: '女娲神庙', region: 'r06', x: 70, y: 72, lv: 66,  links: ['n06', 'n10'] },
+  { id: 'n09', name: '沼泽之心', region: 'r05', x: 62, y: 24, lv: 58,  links: ['n07', 'n11'] },
+  { id: 'n10', name: '通天峰',   region: 'r07', x: 82, y: 56, lv: 84,  links: ['n08', 'n12'] },
+  { id: 'n11', name: '剑冢',     region: 'r08', x: 76, y: 10, lv: 104, links: ['n09', 'n12'] },
+  { id: 'n12', name: '诛仙剑阵', region: 'r08', x: 92, y: 36, lv: 120, links: ['n10', 'n11'] }
+];
+const ENC = {
+  e_old:      { t: '拦路老者', d: '一位衣衫褴褛的老者拦住去路，说只要些灵石，就告诉你一处藏宝。',
+                c: [{ t: '给他 300 灵石', cost: { gold: 300 }, gain: { exp: 160 } },
+                    { t: '不理会', gain: { exp: 40 } }] },
+  e_bandit:   { t: '山匪劫道', d: '几名山匪从林中窜出，为首者盯着你的行囊。',
+                c: [{ t: '出手教训', gain: { gold: 280, exp: 120 } },
+                    { t: '破财免灾', cost: { gold: 150 }, gain: { exp: 30 } }] },
+  e_herb:     { t: '崖边灵草', d: '石缝里一株灵草随风轻摆，叶片上有细密的光点。',
+                c: [{ t: '采下', gain: { exp: 90, gold: 120 } },
+                    { t: '留它生长', gain: { exp: 150 } }] },
+  e_bamboo:   { t: '竹涛', d: '竹林深处传来清越的声响，像是有人在练剑。',
+                c: [{ t: '静听一炷香', gain: { exp: 220 } },
+                    { t: '循声而去', gain: { gold: 180, exp: 60 } }] },
+  e_bat:      { t: '蝠群', d: '头顶洞壁倒挂着一片蝠影，稍有声响便会扑下。',
+                c: [{ t: '屏息潜行', gain: { exp: 180 } },
+                    { t: '点起火折', cost: { gold: 60 }, gain: { gold: 320, exp: 90 } }] },
+  e_spring:   { t: '幽泉', d: '一泓泉水自岩缝涌出，寒气逼人，饮之沁骨。',
+                c: [{ t: '饮一口', gain: { exp: 200 } },
+                    { t: '以泉洗剑', cost: { gold: 120 }, gain: { exp: 340 } }] },
+  e_spirit:   { t: '泉灵', d: '水中浮起一团淡蓝色灵体，它似乎有话要说。',
+                c: [{ t: '听它说完', gain: { exp: 420 } },
+                    { t: '不与之纠缠', gain: { exp: 80 } }] },
+  e_fire:     { t: '地火', d: '地面裂开一道细缝，赤色地火在缝里跳动。',
+                c: [{ t: '取火种', gain: { exp: 260, gold: 200 } },
+                    { t: '远远绕开', gain: { exp: 60 } }] },
+  e_forge:    { t: '废弃剑炉', d: '一座荒废的剑炉，炉膛里还留着半截未成的剑胚。',
+                c: [{ t: '收走剑胚', gain: { gold: 460 } },
+                    { t: '为炉添一把柴', cost: { gold: 200 }, gain: { exp: 520 } }] },
+  e_swamp:    { t: '沼雾', d: '浓绿的沼雾里传来异响，分不清是兽还是人。',
+                c: [{ t: '绕行', gain: { exp: 120 } },
+                    { t: '迎面走进去', gain: { gold: 240, exp: 320 } }] },
+  e_lotus:    { t: '沼泽青莲', d: '一株青莲开在毒沼中央，花瓣上凝着黑气。',
+                c: [{ t: '摘下（有毒）', cost: { gold: 80 }, gain: { exp: 560 } },
+                    { t: '以剑挑开', gain: { gold: 260, exp: 180 } }] },
+  e_altar:    { t: '神庙祭坛', d: '祭坛上刻着女娲补天的旧图，凹槽里积满了灰。',
+                c: [{ t: '拂去积灰', gain: { exp: 480 } },
+                    { t: '献上一份灵石', cost: { gold: 600 }, gain: { exp: 900 } }] },
+  e_nuwa:     { t: '补天遗石', d: '坛心一块五色石微微发烫 —— 传说中补天剩下的那一种。',
+                c: [{ t: '取走', gain: { gold: 1200, exp: 600 } },
+                    { t: '原样放回', gain: { exp: 1400 } }] },
+  e_ice:      { t: '冰髓', d: '万年不化的岩冰里封着一缕青气。',
+                c: [{ t: '凿冰取髓', gain: { exp: 620, gold: 300 } },
+                    { t: '不坏此冰', gain: { exp: 780 } }] },
+  e_peak:     { t: '峰顶罡风', d: '罡风如刀，立在此处已是不易。',
+                c: [{ t: '迎风而立', gain: { exp: 900 } },
+                    { t: '退到避风处', gain: { exp: 200 } }] },
+  e_sword:    { t: '剑冢', d: '万千残剑插在土里，剑身皆朝着同一个方向。',
+                c: [{ t: '取一柄残剑', gain: { gold: 800, exp: 500 } },
+                    { t: '逐一向剑行礼', gain: { exp: 1300 } }] },
+  e_ghost:    { t: '剑意残魂', d: '一具残魂握剑守在冢口，问你为何而来。',
+                c: [{ t: '答"为剑道"', gain: { exp: 1500 } },
+                    { t: '答"为胜"', gain: { gold: 1000, exp: 700 } }] },
+  e_array:    { t: '剑阵边缘', d: '前方剑气纵横成阵，只一步便是万丈剑光。',
+                c: [{ t: '退一步观阵', gain: { exp: 1200 } },
+                    { t: '踏进去', cost: { gold: 500 }, gain: { exp: 2400 } }] },
+  e_zuxian:   { t: '阵眼 · 诛仙', d: '阵心悬着一柄古剑，剑身上刻着两个古字。',
+                c: [{ t: '伸手触碰', gain: { exp: 3600, gold: 1500 } },
+                    { t: '遥遥一拜', gain: { exp: 4800 } }] }
+};
+const NODE_ENC = {
+  n01: [['e_old', 6], ['e_bandit', 5], ['e_herb', 7]],
+  n02: [['e_herb', 9], ['e_bamboo', 5]],
+  n03: [['e_spring', 6], ['e_bamboo', 4]],
+  n04: [['e_bat', 7], ['e_forge', 3]],
+  n05: [['e_spring', 6], ['e_spirit', 4]],
+  n06: [['e_fire', 7], ['e_forge', 4]],
+  n07: [['e_swamp', 6], ['e_lotus', 5]],
+  n08: [['e_altar', 5], ['e_nuwa', 2]],
+  n09: [['e_swamp', 5], ['e_lotus', 6]],
+  n10: [['e_peak', 5], ['e_ice', 6]],
+  n11: [['e_sword', 5], ['e_ghost', 4]],
+  n12: [['e_array', 4], ['e_zuxian', 1]]
+};
+const MAP_KEY = 'zx_map_v1';
+let MAP = { at: 'n01', found: { n01: 1 } };
+try { const raw = localStorage.getItem(MAP_KEY); if (raw) MAP = JSON.parse(raw); } catch (e) { }
+function saveMap() { try { localStorage.setItem(MAP_KEY, JSON.stringify(MAP)); } catch (e) { } }
+const nodeOf = id => NODES.find(n => n.id === id);
+const hereNode = () => nodeOf(MAP.at) || NODES[0];
+
+function renderMap() {
+  const body = el('mapBody');
+  const w = body.clientWidth, h = body.clientHeight;
+  const svg = el('mapSvg');
+  let path = '';
+  NODES.forEach(n => n.links.forEach(l => {
+    if (l < n.id) return;                                  /* 每条连线只画一次 */
+    const m = nodeOf(l);
+    path += '<line x1="' + (n.x / 100 * w) + '" y1="' + (n.y / 100 * h) + '" x2="' + (m.x / 100 * w) +
+      '" y2="' + (m.y / 100 * h) + '" stroke="rgba(148,163,184,.35)" stroke-width="1.5" stroke-dasharray="4 5"/>';
+  }));
+  svg.innerHTML = path;
+  [...body.querySelectorAll('.node')].forEach(d => d.remove());
+  NODES.forEach(n => {
+    const known = !!MAP.found[n.id];
+    const reach = hereNode().links.indexOf(n.id) >= 0;
+    const lock = G.state.level < n.lv;
+    const d = document.createElement('div');
+    d.className = 'node' + (MAP.at === n.id ? ' here' : '')
+      + (known ? ' found' : ' known') + (lock ? ' lock' : '');
+    d.style.left = n.x + '%'; d.style.top = n.y + '%';
+    d.innerHTML = '<div class="dot" style="border-color:' + (MAP.at === n.id ? '#facc15'
+      : (known ? 'rgba(94,234,212,.75)' : 'rgba(255,255,255,.35)')) + '"></div>' +
+      '<div class="nm" style="color:' + (known ? '#d6d3d1' : '#a8a29e') + '">' +
+      (known || reach ? n.name : '？？？') + '</div>' +
+      '<div class="lv">Lv.' + n.lv + (lock ? ' · 未达' : '') + '</div>';
+    if (!lock && reach && MAP.at !== n.id) {
+      d.addEventListener('click', () => travel(n.id));
+    }
+    body.appendChild(d);
+  });
+}
+function travel(id) {
+  const n = nodeOf(id);
+  if (!n) return;
+  MAP.at = id; MAP.found[id] = 1; saveMap();
+  el('mapWrap').classList.remove('on');
+  regionSel.value = n.region;
+  Game.switchRegion && Game.switchRegion(n.region, false);
+  applyRegion(n.region);
+  /* 走位：主角转身向前走两步（3D 里真的"走"过去，而不是换个贴图） */
+  walking = 0.9;
+  addLog('前往「' + n.name + '」', 'sk');
+  toast(n.name, SECT.color);
+  renderMap();
+  if (Math.random() < 0.55) setTimeout(() => rollEncounter(id), 900);
+}
+/* 加权抽一个奇遇 */
+function rollEncounter(nodeId) {
+  const tbl = NODE_ENC[nodeId] || [];
+  if (!tbl.length) return;
+  let total = 0;
+  tbl.forEach(([, w]) => { total += w; });
+  let r = Math.random() * total, pick = tbl[0][0];
+  for (let i = 0; i < tbl.length; i++) { r -= tbl[i][1]; if (r <= 0) { pick = tbl[i][0]; break; } }
+  openEnc(pick);
+}
+let encOpen = '';
+function openEnc(id) {
+  const e = ENC[id];
+  if (!e) return;
+  encOpen = id;
+  el('encTitle').textContent = e.t;
+  el('encText').textContent = e.d;
+  const box = el('encChoices');
+  box.innerHTML = '';
+  e.c.forEach((c, i) => {
+    const cost = c.cost && c.cost.gold ? ('花费 ' + c.cost.gold + ' 灵石') : '';
+    const gain = [];
+    if (c.gain && c.gain.gold) gain.push('+' + c.gain.gold + ' 灵石');
+    if (c.gain && c.gain.exp) gain.push('+' + c.gain.exp + ' 修为');
+    const b = document.createElement('button');
+    b.className = 'encChoice';
+    b.innerHTML = c.t + '<br><em>' + [cost, gain.join(' · ')].filter(Boolean).join(' · ') + '</em>';
+    b.addEventListener('click', () => pickChoice(c));
+    box.appendChild(b);
+  });
+  el('encWrap').classList.add('on');
+}
+function pickChoice(c) {
+  const s = G.state;
+  if (c.cost && c.cost.gold && s.gold < c.cost.gold) { toast('灵石不足', '#fca5a5'); return; }
+  if (c.cost && c.cost.gold) s.gold -= c.cost.gold;
+  const got = [];
+  if (c.gain && c.gain.gold) { s.gold += c.gain.gold; got.push('+' + c.gain.gold + ' 灵石'); }
+  if (c.gain && c.gain.exp) { s.exp += c.gain.exp; got.push('+' + c.gain.exp + ' 修为'); }
+  const title = (ENC[encOpen] || {}).t || '';
+  el('encWrap').classList.remove('on');
+  encOpen = '';
+  addLog('奇遇「' + title + '」——' + got.join('，'), 'sk');
+  toast(got.join('  '), '#facc15');
+  spawnParticles(heroRoot.position, 30, '#facc15', 1.6, true);
+  flash(0xffe6bd, 12, 260);
+  try { G.save && G.save(); } catch (e) { }
+}
+let walking = 0, idleEncT = 60;
+function idleEncounter(dt) {
+  if (!G.state.auto || encOpen) return;
+  idleEncT -= dt;
+  if (idleEncT > 0) return;
+  idleEncT = 100 + Math.random() * 90;                     /* 约 1.5~3 分钟一次 */
+  if (Math.random() < 0.34) rollEncounter(MAP.at);
+}
+el('mapBtn').addEventListener('click', () => { el('mapWrap').classList.add('on'); renderMap(); });
+el('mapClose').addEventListener('click', () => el('mapWrap').classList.remove('on'));
+addEventListener('resize', () => { if (el('mapWrap').classList.contains('on')) renderMap(); });
+
 /* ---------- 14. 主循环：Game.tick 驱动真实战斗，本页只负责表现 ---------- */
 let last = performance.now(), acc = 0, frames = 0, low = 0;
 function loop(now) {
@@ -996,6 +1266,7 @@ function loop(now) {
   hud(dt);
   updateMobs(dt, now);
   stepWeather(dt);
+  idleEncounter(dt);
   const cx = mobMeshes.size ? [...mobMeshes.values()].reduce((a, g) => a + g.position.x, 0) / mobMeshes.size : heroRoot.position.x;
   controls.target.lerp(new THREE.Vector3((heroRoot.position.x + cx) * 0.32, 2.05, 0), 0.035);
   controls.update();
