@@ -218,6 +218,7 @@ window.CUR = LX_V;
 ].forEach(function (f) { document.write('<script src="' + f + LX_Q + '"><\/script>'); });
 </script>
 <script>if (window.LUCIDE_SPRITE) document.body.insertAdjacentHTML('afterbegin', window.LUCIDE_SPRITE);</script>
+
 <script type="module">
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
@@ -281,7 +282,7 @@ renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 const scene = new THREE.Scene();
 scene.fog = new THREE.FogExp2(0x0b1220, 0.018);
 const camera = new THREE.PerspectiveCamera(46, 1, 0.1, 500);
-camera.position.set(0, 5.4, 12.8);
+camera.position.set(0, 4.8, 11.0);
 const controls = new OrbitControls(camera, canvas);
 Object.assign(controls, { enableDamping: true, dampingFactor: 0.075, minDistance: 5.5,
   maxDistance: 30, minPolarAngle: 0.32, maxPolarAngle: Math.PI * 0.47,
@@ -348,7 +349,7 @@ scene.background = skyTex;
 /* ---------- 3. 光照：半球 + 主光（软阴影）+ 冷色轮廓光 + 施法动态点光 ---------- */
 const hemi = new THREE.HemisphereLight(0x9ec9ff, 0x2b2c22, 0.62);
 scene.add(hemi);
-const sun = new THREE.DirectionalLight(0xffe6bd, 2.2);
+const sun = new THREE.DirectionalLight(0xffe6bd, 1.8);
 sun.position.set(-9, 15, 8); sun.castShadow = true;
 /* 阴影条纹（acne）：平面地面用很小的正 bias + 极小的 normalBias 就够；
    bias 调大反而会让阴影脱脚（peter-panning） */
@@ -491,7 +492,7 @@ layoutProps(20260926);
 const characters = new THREE.Group();
 scene.add(characters);
 const heroRoot = new THREE.Group();
-heroRoot.position.set(2.6, 0, 0);
+heroRoot.position.set(1.5, 0, 0);
 heroRoot.rotation.y = -0.95;
 characters.add(heroRoot);
 let heroModel = null, heroFallback = null, heroPivot = null;
@@ -678,6 +679,14 @@ function loadModels() {
   const V = LXQ();
   loadGLB('assets/models/hero_cultivator' + sfx + '.glb' + V, scene2 => {
     standardize(scene2, 3.55);
+    /* 主角那身白袍反照率接近 1，配强光会整片糊成纯白（看不出衣褶与五官），
+       这里只压主角自身材质，不动整体环境亮度 —— 妖物偏暗，无需处理。 */
+    scene2.traverse(o => {
+      if (o.isMesh && o.material && o.material.color) {
+        o.material.color.multiplyScalar(0.78);
+        o.material.needsUpdate = true;
+      }
+    });
     if (heroPivot) heroRoot.remove(heroPivot);
     if (heroFallback && heroFallback.parentNode) heroRoot.remove(heroFallback);
     heroPivot = new THREE.Group();
@@ -791,7 +800,11 @@ let shake = 0, freeze = 0;
 function punch(p) { shake = Math.max(shake, p); freeze = Math.max(freeze, 0.085); }
 
 /* ---------- 7. 怪物同步：直接跟 core.js 的战斗上下文对齐 ---------- */
-function mobPosOf(m) { return { x: -3.4 - (m.idx || 0) * 1.5, y: 0, z: (m.idx === 1 ? -2.1 : m.idx === 2 ? 2.1 : 0) }; }
+/* 妖物站位：原来是 -3.4 - idx*1.5（最远到 -6.4），加上主角在 +2.6，
+   整场跨度 9 个世界单位，手机竖屏根本装不下（只能靠超大 FOV 硬塞，人就被压得很小）。
+   改成紧凑弧阵：主角在 +1.5，妖物聚在左前方，跨度约 6 个单位。 */
+const MOB_SLOT = [{ x: -2.2, z: 0 }, { x: -2.9, z: -1.8 }, { x: -2.9, z: 1.8 }];
+function mobPosOf(m) { const s = MOB_SLOT[(m.idx || 0) % 3]; return { x: s.x, y: 0, z: s.z }; }
 function rebuildMob(gr) {
   gr.userData.fallback = !mobTplReady;
   const old = gr.children[0];
@@ -830,7 +843,7 @@ function syncMobs() {
 }
 function mobAnchor(idx) {
   const gr = mobMeshes.get(idx);
-  return gr ? gr.position : new THREE.Vector3(-3.4, 0, 0);
+  return gr ? gr.position : new THREE.Vector3(-2.2, 0, 0);
 }
 /* 造一只怪：优先用 GLB（岩甲兽），其余用程序化形体。
    无论哪种，都在组级别挂一张贴地暗斑 —— 怪物必须"压在地上"才像活的。 */
@@ -930,7 +943,7 @@ function applyPose(dt) {
     heroRoot.position.y += Math.abs(step) * 0.09 * k;
     heroRoot.rotation.z += step * 0.05 * k;
     heroRoot.position.x += 0.5 * dt * k;
-    if (walking <= 0) heroRoot.position.x = 2.6;
+    if (walking <= 0) heroRoot.position.x = 1.5;
   }
 }
 
@@ -1056,19 +1069,108 @@ regionSel.addEventListener('change', () => {
 });
 
 /* ---------- 11. 后处理：Bloom 让剑光/灵气真的发光 ---------- */
+/* ⚠⚠ 这条是「人物看起来很奇怪」的元凶，改动前务必读完：
+   EffectComposer 是把场景先画进 render target 的，而 three.js 只在「直接画到画布」时才应用
+   renderer.toneMapping —— 渲染到 render target 时内部会强制 NoToneMapping
+   （源码：s.toneMapped && ( null !== 当前RT && !isXRRenderTarget || ( 取 renderer.toneMapping ) )）。
+   所以只要挂了 composer 而不做输出转换，HDR 线性值就会直接上屏：
+   主角那身接近纯白的袍子受光约 2.0，会被削平成一片没有明暗的死白（= 看起来像纸片/光团）。
+   官方解法是往 composer 末尾加 OutputPass，但 assets/three 只打包了 13 个文件、没有 OutputPass.js，
+   于是这里用 ShaderPass 自己补一道与 three 内置实现完全一致的 ACES 色调映射 + sRGB 编码。
+   —— 低画质档不走 composer，走的是 renderer 直接出图，所以反而一直是对的。 */
+const OUTPUT_SHADER = {
+  uniforms: { tDiffuse: { value: null }, exposure: { value: 0.88 } },
+  vertexShader: [
+    'varying vec2 vUv;',
+    'void main() {',
+    '  vUv = uv;',
+    '  gl_Position = projectionMatrix * modelViewMatrix * vec4( position, 1.0 );',
+    '}'
+  ].join('\n'),
+  fragmentShader: [
+    'uniform sampler2D tDiffuse;',
+    'uniform float exposure;',
+    'varying vec2 vUv;',
+    '/* ⚠ 函数名必须避开 three 前缀里已有的定义：只要 renderer.toneMapping 不是 NoToneMapping，',
+    '   three 就会给所有材质的前缀塞进 tonemapping_pars_fragment，里面已经有 RRTAndODTFit /',
+    '   ACESFilmicToneMapping / sRGBTransferOETF 等。重名会报 "function already has a body"',
+    '   导致程序无效、画面全黑（这个坑踩过一次，务必保留 zx 前缀）。 */',
+    'vec3 zxRRTAndODTFit( vec3 v ) {',
+    '  vec3 a = v * ( v + 0.0245786 ) - 0.000090537;',
+    '  vec3 b = v * ( 0.983729 * v + 0.4329510 ) + 0.238081;',
+    '  return a / b;',
+    '}',
+    'vec3 zxAcesFilmic( vec3 color ) {',
+    '  const mat3 IN = mat3(',
+    '    0.59719, 0.07600, 0.02840,',
+    '    0.35458, 0.90834, 0.13383,',
+    '    0.04823, 0.01566, 0.83777 );',
+    '  const mat3 OUT = mat3(',
+    '     1.60475, -0.10208, -0.00327,',
+    '    -0.53108,  1.10813, -0.07276,',
+    '    -0.07367, -0.00605,  1.07602 );',
+    '  color *= exposure / 0.6;',
+    '  color = IN * color;',
+    '  color = zxRRTAndODTFit( color );',
+    '  color = OUT * color;',
+    '  return clamp( color, 0.0, 1.0 );',
+    '}',
+    'void main() {',
+    '  vec4 texel = texture2D( tDiffuse, vUv );',
+    '  vec3 c = zxAcesFilmic( texel.rgb );',
+    '  /* 线性 → sRGB（与 three 的 sRGBTransferOETF 一致） */',
+    '  vec3 lo = c * 12.92;',
+    '  vec3 hi = 1.055 * pow( c, vec3( 0.41666 ) ) - 0.055;',
+    '  gl_FragColor = vec4( mix( lo, hi, step( vec3( 0.0031308 ), c ) ), texel.a );',
+    '}'
+  ].join('\n')
+};
 let composer = null, bloomPass = null;
+/* 输出环节自己这一套（不用 ShaderPass）：composer 只负责 Bloom，
+   最后用「普通 Mesh + 正交相机 + renderer.render」把线性 HDR 转成正常画面。
+   这条路径在最小复现里验证过可用；走 ShaderPass 挂到 composer 末尾时，
+   浏览器会持续报 useProgram: program not valid 且画面全黑，故避开。 */
+let outMat = null, outScene = null, outCam = null;
+function buildOutputStage() {
+  if (outMat) return;
+  outMat = new THREE.ShaderMaterial({
+    uniforms: { tDiffuse: { value: null }, exposure: { value: renderer.toneMappingExposure } },
+    vertexShader: OUTPUT_SHADER.vertexShader,
+    fragmentShader: OUTPUT_SHADER.fragmentShader
+  });
+  outScene = new THREE.Scene();
+  outScene.add(new THREE.Mesh(new THREE.PlaneGeometry(2, 2), outMat));
+  outCam = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
+}
 function buildComposer() {
   const T = TIERS[tier];
   if (!T.bloom) { composer = null; bloomPass = null; return; }
   composer = new EffectComposer(renderer);
   composer.addPass(new RenderPass(scene, camera));
-  /* 阈值 0.92：主角那身接近纯白的袍子在暗场景里很容易被 Bloom 糊成一团光，
-     抬高阈值后只有真正超过 1.0 的自发光（剑锋/门派色环/火星）才发光 */
-  bloomPass = new UnrealBloomPass(new THREE.Vector2(innerWidth, innerHeight), T.bloom, 0.58, 0.92);
+  /* Bloom 作用在线性 HDR 上，阈值 1.0 表示「只有比纯白还亮的东西才发光」
+     （剑锋/门派色环/火星/加色粒子），白袍本体不会被糊成光团 */
+  bloomPass = new UnrealBloomPass(new THREE.Vector2(innerWidth, innerHeight), T.bloom, 0.58, 1.6);
   composer.addPass(bloomPass);
+  /* 关键：不让 composer 直接出图（它出的是没做过色调映射的线性 HDR），
+     结果留在 readBuffer 里，交给下面的输出环节处理。
+     Bloom 的 needsSwap=false，会把合成结果写回 readBuffer。 */
+  composer.renderToScreen = false;
   composer.setSize(innerWidth, innerHeight);
+  buildOutputStage();
 }
 buildComposer();
+
+/* 出图：composer 有的话先跑 Bloom，再做 ACES + sRGB 输出；否则直接渲染 */
+function presentFrame() {
+  if (composer) {
+    composer.render();
+    outMat.uniforms.tDiffuse.value = composer.readBuffer.texture;
+    renderer.setRenderTarget(null);
+    renderer.render(outScene, outCam);
+  } else {
+    renderer.render(scene, camera);
+  }
+}
 
 /* ---------- 12. 画质切换 ---------- */
 function applyTier() {
@@ -1419,7 +1521,7 @@ function loop(now) {
     shake = Math.max(0, shake - dt * 2.0);
     scene.position.set((Math.random() - 0.5) * shake, (Math.random() - 0.5) * shake * 0.8, 0);
   } else if (scene.position.x || scene.position.y) scene.position.set(0, 0, 0);
-  if (composer) composer.render(); else renderer.render(scene, camera);
+  presentFrame();
 
   frames++; acc += dt;
   if (acc >= 0.6) {
@@ -1433,13 +1535,12 @@ function loop(now) {
 function resize() {
   const w = innerWidth, h = innerHeight;
   camera.aspect = w / h;
-  /* 竖屏的横向视野会被 aspect 压窄：主角站在 x=+2.6、妖物在左侧，
-     窄屏（如 390×844，a≈0.46）上主角会被切在右缘、妖物也看到不。
-     这里按「需要横向半宽 ≈ 4.6 世界单位 / 相机距离 ≈ 13.2」反推竖直 FOV：
-     a≥1（横屏/方屏）仍是 46°；越窄越开到最大 76°（再大就有鱼眼畸变）。 */
+  /* 竖屏的横向视野会被 aspect 压窄：主角站在 x=+1.5、妖物聚在左前方，
+     整场跨度约 6 个世界单位，所以按「需要横向半宽 ≈ 3.5 / 相机距离 ≈ 11.3」反推竖直 FOV：
+     a≥1（横屏/方屏）仍是 46°；越窄越开到最大 72°（再大就有鱼眼畸变，人也会被压小）。 */
   const a = w / h;
-  const need = 2 * Math.atan((5.0 / 13.2) / Math.max(0.25, a)) * 180 / Math.PI;
-  camera.fov = Math.max(46, Math.min(80, need));
+  const need = 2 * Math.atan((3.5 / 11.3) / Math.max(0.25, a)) * 180 / Math.PI;
+  camera.fov = Math.max(46, Math.min(72, need));
   camera.updateProjectionMatrix();
   renderer.setSize(w, h, false);
   if (composer) composer.setSize(w, h);
