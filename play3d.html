@@ -34,6 +34,18 @@
     font:700 22px/1.3 system-ui; color:#facc15; text-shadow:0 2px 14px rgba(250,204,21,.55),0 2px 4px #000;
     opacity:0; transition:opacity .16s,transform .16s; pointer-events:none; white-space:nowrap; }
   #toast.on { opacity:1; transform:translate(-50%,-50%) scale(1); }
+  /* 伤害飘字：把 3D 坐标投影到屏幕，用 DOM 渲染 —— 比 3D 文字便宜得多，也更清晰 */
+  #floaters { position:fixed; inset:0; z-index:4; pointer-events:none; overflow:hidden; }
+  .flo { position:absolute; font:700 15px/1 ui-monospace,monospace; white-space:nowrap;
+    text-shadow:0 2px 6px #000,0 0 12px currentColor; transform:translate(-50%,-50%);
+    animation:floUp .86s cubic-bezier(.2,.9,.3,1) forwards; }
+  .flo.crit { font-size:21px; letter-spacing:.02em; }
+  .flo.heal { font-size:16px; }
+  @keyframes floUp {
+    0%   { opacity:0; transform:translate(-50%,-50%) scale(.7); }
+    18%  { opacity:1; transform:translate(-50%,-70%) scale(1.12); }
+    100% { opacity:0; transform:translate(-50%,-190%) scale(.95); }
+  }
   .btn { pointer-events:auto; border:1px solid rgba(255,255,255,.16); background:rgba(10,14,20,.6);
     color:#e7e5e4; border-radius:10px; padding:7px 11px; font-size:12px; white-space:nowrap; }
   .btn.gold { border-color:rgba(250,204,21,.5); color:#facc15; }
@@ -80,6 +92,7 @@
 <div id="fps"></div>
 <div id="hint">拖动旋转视角 · 滚轮／双指缩放 · 点「开战」自动挂机</div>
 <div id="toast"></div>
+<div id="floaters"></div>
 
 <div class="hud" id="bottom">
   <div class="panel" id="log"></div>
@@ -542,6 +555,29 @@ function flash(color, power, dur) {
   master.color.set(color); master.intensity = power;
   setTimeout(() => { master.intensity = 0; }, dur || 220);
 }
+/* ---- 打击感三件套：伤害飘字 / 镜头震动 / 命中顿帧 ----
+   飘字用 3D→屏幕投影 + DOM 渲染：比在场景里铺 Sprite 便宜得多，字也更清楚。
+   震动作用在 scene.position 上而不是 camera 上 —— 后者会和 OrbitControls 打架
+   （每帧叠加偏移会让镜头一路漂走）。 */
+const _v = new THREE.Vector3();
+let floCount = 0;
+function floater(pos, text, cls, color) {
+  if (floCount > 24) return;
+  _v.copy(pos); _v.y += 1.5;
+  _v.project(camera);
+  if (_v.z > 1) return;
+  const d = document.createElement('div');
+  d.className = 'flo ' + (cls || '');
+  d.textContent = text;
+  d.style.left = ((_v.x * 0.5 + 0.5) * innerWidth).toFixed(1) + 'px';
+  d.style.top = ((-_v.y * 0.5 + 0.5) * innerHeight).toFixed(1) + 'px';
+  d.style.color = color || '#fca5a5';
+  el('floaters').appendChild(d);
+  floCount++;
+  setTimeout(() => { d.remove(); floCount--; }, 880);
+}
+let shake = 0, freeze = 0;
+function punch(p) { shake = Math.max(shake, p); freeze = Math.max(freeze, 0.085); }
 
 /* ---------- 7. 怪物同步：直接跟 core.js 的战斗上下文对齐 ---------- */
 function mobPosOf(m) { return { x: -3.4 - (m.idx || 0) * 1.5, y: 0, z: (m.idx === 1 ? -2.1 : m.idx === 2 ? 2.1 : 0) }; }
@@ -573,10 +609,12 @@ function syncMobs() {
     gr.position.z += (p.z - gr.position.z) * 0.06;
   });
   mobMeshes.forEach((gr, idx) => {
-    if (alive.has(idx)) return;
+    if (alive.has(idx) || gr.userData.dying) return;
+    /* 不死得消失得太干脆：先倒地 + 下沉 + 落地震波，播完再移除 */
+    gr.userData.dying = 0.001;
     spawnParticles(gr.position, 34, '#facc15', 2.4, true);
     shockwave(gr.position, '#facc15', 4.0);
-    scene.remove(gr); mobMeshes.delete(idx);
+    punch(0.2);
   });
 }
 function mobAnchor(idx) {
@@ -608,8 +646,20 @@ function makeMob(kind) {
 /* 每帧的怪物行为：出场弹起 → 面向主角 → 呼吸 → 扑击 → 受击后退 */
 function updateMobs(dt, now) {
   const hp = heroRoot.position;
-  mobMeshes.forEach(gr => {
+  mobMeshes.forEach((gr, idx) => {
     const u = gr.userData;
+    /* 死亡：侧翻倒地 → 沉入地下 → 缩小移除（不是"啪"一下就不见） */
+    if (u.dying) {
+      u.dying += dt;
+      const k = Math.min(1, u.dying / 0.78);
+      gr.rotation.x = -k * 1.35;
+      gr.rotation.z = k * 0.22;
+      gr.position.y = -k * 1.15;
+      gr.scale.setScalar(Math.max(0.001, 1 - k * 0.4));
+      if (u.shadowBlob) u.shadowBlob.material.opacity = 0.4 * (1 - k);
+      if (k >= 1) { scene.remove(gr); mobMeshes.delete(idx); }
+      return;
+    }
     u.spring = Math.min(1, u.spring + dt * 2.4);
     const s = u.spring * u.spring * (3 - 2 * u.spring);           /* smoothstep 弹出 */
     gr.scale.setScalar(s);
@@ -675,17 +725,25 @@ G.on('skill', s => {
   shockwave(heroRoot.position, SECT.color, 2.6);
 });
 G.on('damage', d => {
-  if (d.heal) { spawnParticles(heroRoot.position, 16, '#4ade80', 1.1, true); addLog('回复 <b>+' + G.fmt(d.amount) + '</b>', ''); return; }
+  if (d.heal) {
+    spawnParticles(heroRoot.position, 16, '#4ade80', 1.1, true);
+    floater(heroRoot.position, '+' + G.fmt(d.amount), 'heal', '#4ade80');
+    addLog('回复 <b>+' + G.fmt(d.amount) + '</b>', ''); return;
+  }
   if (d.side === 'mob') {
-    const a = mobAnchor(d.idx || 0);
+    const a = mobAnchor(d.idx || 0).clone();
     const hitGr = mobMeshes.get(d.idx || 0);
     if (hitGr) hitGr.userData.recoil = 1;      /* 挨打往后一顿 */
     spawnParticles(a, d.crit ? 22 : 11, d.crit ? '#fde047' : SECT.color, 2.2, true);
     shockwave(a, d.crit ? '#fde047' : SECT.color, d.crit ? 2.8 : 1.8);
+    floater(a, (d.crit ? '暴击 ' : '') + G.fmt(d.amount), d.crit ? 'crit' : '', d.crit ? '#fde047' : '#fff3c4');
+    if (d.crit) punch(0.34); else if (shake <= 0) punch(0.08);
     addLog((d.crit ? '暴击 ' : '') + '<span class="hit">-' + G.fmt(d.amount) + '</span>', '');
   } else {
     pose.hit = 0.3;
     spawnParticles(heroRoot.position, 8, '#fca5a5', 1.4, false);
+    floater(heroRoot.position, '-' + G.fmt(d.amount), '', '#fca5a5');
+    punch(0.16);
     addLog('受击 <span class="hit">-' + G.fmt(d.amount) + '</span>', '');
   }
 });
@@ -791,8 +849,10 @@ el('fight').textContent = G.state.auto ? '停战' : '开战';
 /* ---------- 14. 主循环：Game.tick 驱动真实战斗，本页只负责表现 ---------- */
 let last = performance.now(), acc = 0, frames = 0, low = 0;
 function loop(now) {
-  const dt = Math.min(0.05, (now - last) / 1000);
+  let dt = Math.min(0.05, (now - last) / 1000);
   last = now;
+  /* 顿帧：命中那一瞬把时间放慢一档 —— 最便宜的打击感，比加特效有效 */
+  if (freeze > 0) { freeze -= dt; dt *= 0.34; }
   if (G.tick) G.tick(dt);            /* ← 真实战斗逻辑（境界/装备/技能/举剑都在里面） */
   syncMobs();
   applyPose(dt);
@@ -804,6 +864,11 @@ function loop(now) {
   controls.target.lerp(new THREE.Vector3((heroRoot.position.x + cx) * 0.32, 2.05, 0), 0.035);
   controls.update();
   master.position.set(heroRoot.position.x - 0.3, 2.6, 0.5);
+  /* 镜头震动作用在世界上（动 scene，不动 camera）—— 动 camera 会和 OrbitControls 抢控制权 */
+  if (shake > 0) {
+    shake = Math.max(0, shake - dt * 2.0);
+    scene.position.set((Math.random() - 0.5) * shake, (Math.random() - 0.5) * shake * 0.8, 0);
+  } else if (scene.position.x || scene.position.y) scene.position.set(0, 0, 0);
   if (composer) composer.render(); else renderer.render(scene, camera);
 
   frames++; acc += dt;
