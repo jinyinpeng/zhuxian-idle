@@ -102,6 +102,9 @@
     border-radius:10px; font-size:12.5px; }
   .encChoice:hover { border-color:rgba(250,204,21,.5); color:#facc15; }
   .encChoice em { font-style:normal; color:#a8a29e; font-size:11px; }
+  /* 建号浮层必须在加载页之上，而且必须自带不透明底：
+     它下面是已经跑起来的 3D 场景与 HUD，透出来就是一团乱。 */
+  #createScreen { z-index:96; background:#06080c; overflow-y:auto; }
   #loading { position:fixed; inset:0; z-index:9; display:flex; align-items:center; justify-content:center;
     flex-direction:column; gap:12px; background:#06080c; transition:opacity .6s; }
   #loading.done { opacity:0; pointer-events:none; }
@@ -231,6 +234,92 @@ window.CUR = LX_V;
 </script>
 <script>if (window.LUCIDE_SPRITE) document.body.insertAdjacentHTML('afterbegin', window.LUCIDE_SPRITE);</script>
 
+<!-- 建号：三门五派、男女身。只在新号时出现一次，选完即入洞天 -->
+<div id="createScreen" class="screen hidden">
+  <div class="create-inner">
+    <div class="brand">
+      <div class="brand-mark">诛仙问道</div>
+      <div class="brand-sub">御剑 · 问道 · 长生</div>
+    </div>
+    <div class="field-row">
+      <span class="field-label">道号</span>
+      <input id="cr-name" class="text-input" maxlength="8" placeholder="取一个道号">
+      <button id="cr-rand" class="btn sm">随机</button>
+    </div>
+    <div class="field-row">
+      <span class="field-label">身</span>
+      <div id="cr-gender" class="row" style="gap:6px">
+        <button class="btn sm on" data-gender="female">女</button>
+        <button class="btn sm" data-gender="male">男</button>
+      </div>
+    </div>
+    <div class="field-label" style="margin:10px 0 6px">拜入门派</div>
+    <div id="cr-sects" class="sect-list"></div>
+    <div id="cr-info" class="brand-sub" style="margin:10px 0 12px;min-height:18px"></div>
+    <button id="cr-start" class="btn gold" style="width:100%">入 洞 天</button>
+  </div>
+</div>
+
+<script>
+/* 建号流程：新号才拦一次（老号直接进）。选完调用 core.js 的 createCharacter，
+   然后 reload —— 重载后就是正常启动路径，省掉一堆"先有鸡还是先有蛋"的状态判断。 */
+(function () {
+  'use strict';
+  const G = window.Game;
+  if (!G) return;
+  try { G.load(); } catch (e) { }
+  if (G.state && G.state.sect) return;                  /* 已有角色：不拦 */
+  /* 已经选过、等着模块落地的，就不要再闪一下建号页 */
+  let pending = null;
+  try { pending = localStorage.getItem('zx_pending_char'); } catch (e) { }
+  if (pending) return;
+  const box = document.getElementById('createScreen');
+  box.classList.remove('hidden');
+  /* 建号时收起"正在构筑洞天"——否则它在最上层，把建号界面整个盖住 */
+  const ld = document.getElementById('loading');
+  if (ld) ld.classList.add('done');
+
+  const SECTS = (window.DATA && window.DATA.SECTS) || [];
+  const FIG = window.FIGURE;
+  const RND = ['青玄', '云间', '枕书', '漱石', '鹤引', '拾星', '无咎', '照夜', '问樵', '疏影'];
+  let gender = 'female', sect = (SECTS[0] || {}).id || 'qingyun';
+
+  const nameEl = document.getElementById('cr-name');
+  const infoEl = document.getElementById('cr-info');
+  function rndName() { return RND[Math.floor(Math.random() * RND.length)] + (Math.random() < 0.5 ? '子' : '生'); }
+  nameEl.value = rndName();
+
+  function paint() {
+    document.getElementById('cr-sects').innerHTML = SECTS.map(s =>
+      '<button class="sect-chip' + (s.id === sect ? ' on' : '') + (gender === 'female' ? ' gender-female' : '') +
+      '" data-sect="' + s.id + '" style="color:' + s.color + '">' +
+      '<span class="sc-fig">' + (FIG ? FIG.hero(s.id, gender) : '') + '</span>' +
+      '<span class="sc-name">' + s.name + '</span></button>').join('');
+    document.querySelectorAll('#cr-sects [data-sect]').forEach(n => n.addEventListener('click', () => {
+      sect = n.getAttribute('data-sect'); paint();
+    }));
+    const cur = SECTS.find(s => s.id === sect) || {};
+    infoEl.textContent = (cur.name || '') + ' · ' +
+      ({ qingyun: '剑修', guiwang: '鬼道', hehuan: '幻术', tianyin: '禅修', fenxiang: '火法' }[sect] || '修士');
+  }
+  document.querySelectorAll('#cr-gender [data-gender]').forEach(b => b.addEventListener('click', () => {
+    gender = b.getAttribute('data-gender');
+    document.querySelectorAll('#cr-gender [data-gender]').forEach(x => x.classList.toggle('on', x === b));
+    paint();
+  }));
+  document.getElementById('cr-rand').addEventListener('click', () => { nameEl.value = rndName(); });
+  document.getElementById('cr-start').addEventListener('click', () => {
+    const nm = (nameEl.value || '').trim() || rndName();
+    /* 不在这里建号：此刻模块还没跑（core 的初始化没完成），
+       createCharacter 写出来的存档不可靠。
+       把选择暂存下来，reload 之后由模块在建好环境的那一刻建号 —— 一次就好。 */
+    try { localStorage.setItem('zx_pending_char', JSON.stringify({ name: nm.slice(0, 8), sect: sect, gender: gender })); } catch (e) { }
+    location.reload();
+  });
+  paint();
+})();
+</script>
+
 <script type="module">
 /* 依赖一律用「相对路径」，不用裸名 'three' —— 裸名必须靠 importmap 解析，
    而 importmap 直到 Chrome 89 / Safari 16.4 才支持：微信内置浏览器、旧安卓 WebView、
@@ -264,10 +353,28 @@ const el = id => document.getElementById(id);
 try {
   G.load();
 } catch (e) { /* 存档损坏：当新号处理 */ }
-if (!G.state || !G.state.sect) {
-  const sect = q.get('sect') || (D.SECTS && D.SECTS[0] && D.SECTS[0].id) || 'qingyun';
-  const gender = q.get('gender') || 'female';
-  G.createCharacter(q.get('name') || '无名散修', sect, gender);
+/* 新号不在这里建 —— 建号浮层会拦住，选完门派再 reload 回来。
+   这样"先有角色还是先有场景"的顺序问题就不存在了。 */
+let READY = !!(G.state && G.state.sect);
+if (!READY) {
+  /* 建号浮层刚存下的选择（或 URL 上带的），在这里落地 ——
+     此时 core 的初始化已完成，写出来的存档是可靠的。 */
+  let pick = null;
+  try {
+    const raw = localStorage.getItem('zx_pending_char');
+    if (raw) { pick = JSON.parse(raw); localStorage.removeItem('zx_pending_char'); }
+  } catch (e) { }
+  if (!pick && (q.get('sect') || q.get('name'))) {
+    pick = { name: q.get('name') || '无名散修', sect: q.get('sect') || 'qingyun', gender: q.get('gender') || 'female' };
+  }
+  if (pick) {
+    try { G.createCharacter(pick.name, pick.sect, pick.gender); G.save(); } catch (e) { }
+    READY = !!(G.state && G.state.sect);
+  }
+  if (READY) {
+    const cs = document.getElementById('createScreen');
+    if (cs) cs.classList.add('hidden');
+  }
 }
 /* ---------- 0.5 离线收益（与 2D 版同一套算法：core.js 的 offlineApply） ----------
    3D 页此前漏了这一步 —— 隔夜再进、或从 2D 切到 3D，离线收益根本不会被结算。
@@ -1696,7 +1803,7 @@ function loop(now) {
   last = now;
   /* 顿帧：命中那一瞬把时间放慢一档 —— 最便宜的打击感，比加特效有效 */
   if (freeze > 0) { freeze -= dt; dt *= 0.34; }
-  if (G.tick) G.tick(dt);            /* ← 真实战斗逻辑（境界/装备/技能/举剑都在里面） */
+  if (READY && G.tick) G.tick(dt);   /* ← 真实战斗逻辑（境界/装备/技能/举剑都在里面） */
   syncMobs();
   applyPose(dt);
   stepParticles(dt);
