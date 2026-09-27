@@ -108,6 +108,17 @@
     border-top-color:#facc15; animation:spin 1s linear infinite; }
   @keyframes spin { to { transform:rotate(360deg); } }
   #ltxt { color:#a8a29e; font-size:12px; } #lsub { color:#57534e; font-size:11px; }
+
+  /* 看门狗失败态：3D 起不来时，把「黑底 + 转圈」换成人能看懂的原因 + 可点的出口。
+     转圈要停掉 —— 一直转会让人以为还在加载，其实是永远加载不出来。 */
+  #loading.gaveup { padding:24px; text-align:center; }
+  #loading.gaveup .ring { display:none; }
+  #loading.gaveup #ltxt { color:#facc15; font-size:14.5px; font-weight:600; letter-spacing:1px; }
+  #loading.gaveup #lsub { color:#a8a29e; font-size:11.5px; line-height:1.9; max-width:330px; }
+  .lx-exit { display:flex; gap:10px; justify-content:center; margin-top:16px; }
+  .lx-exit a { display:inline-block; padding:9px 15px; border-radius:9px; font-size:12.5px;
+    text-decoration:none; border:1px solid rgba(250,204,21,.5); background:rgba(250,204,21,.10); color:#facc15; }
+  .lx-exit a.dim { border-color:rgba(168,162,158,.4); background:transparent; color:#d6d3d1; }
 </style>
 <!-- three.js 已本地化到 assets/three/（只保留实际用到的 13 个文件，合计 0.83MB），
      彻底不再依赖 unpkg CDN —— 3D 页因此断网也能打开。
@@ -220,13 +231,20 @@ window.CUR = LX_V;
 <script>if (window.LUCIDE_SPRITE) document.body.insertAdjacentHTML('afterbegin', window.LUCIDE_SPRITE);</script>
 
 <script type="module">
-import * as THREE from 'three';
-import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
-import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
-import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
-import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
-import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
-import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
+/* 依赖一律用「相对路径」，不用裸名 'three' —— 裸名必须靠 importmap 解析，
+   而 importmap 直到 Chrome 89 / Safari 16.4 才支持：微信内置浏览器、旧安卓 WebView、
+   旧 iPhone 会直接解析失败 → 模块不执行 → 页面永远停在「正在构筑洞天…」，
+   玩家看到的就是「一片黑，连人物和怪物都没有」（2026-09-27 用户实测反馈）。
+   现在 assets/three/addons/ 里的 addon 也已把 from 'three' 改成相对路径，
+   整条依赖链不再需要 importmap（上面的 importmap 保留只为兼容，去掉也能跑）。 */
+import * as THREE from './assets/three/three.module.min.js';
+import { OrbitControls } from './assets/three/addons/controls/OrbitControls.js';
+import { RoomEnvironment } from './assets/three/addons/environments/RoomEnvironment.js';
+import { GLTFLoader } from './assets/three/addons/loaders/GLTFLoader.js';
+import { EffectComposer } from './assets/three/addons/postprocessing/EffectComposer.js';
+import { RenderPass } from './assets/three/addons/postprocessing/RenderPass.js';
+import { UnrealBloomPass } from './assets/three/addons/postprocessing/UnrealBloomPass.js';
+window.__LX3D_BOOT = 1;   /* 模块真的跑起来了 —— 入口看门狗据此判断要不要兜底 */
 
 /* ============================================================================
    3D 洞天 —— 与 2D 版共用同一个 core.js（它零 DOM 依赖，可直接在 3D 里跑）。
@@ -269,10 +287,36 @@ const TIERS = [
   { n: '中', dpr: 1.5, shadow: 1024, bloom: 0.3,  part: 150, rock: 26, tree: 18, refine: false },
   { n: '高', dpr: 2.0, shadow: 2048, bloom: 0.52, part: 280, rock: 34, tree: 26, refine: true }
 ];
-let tier = Math.max(0, Math.min(2, parseInt(localStorage.getItem('zx3d_tier') || '2', 10) || 0));
+/* 首次进入的默认档位按设备能力给保守值。
+   以前是无条件「高」（dpr 2.0 + 2048 阴影 + Bloom）：手机首帧就要按 2 倍分辨率建
+   2048 的阴影贴图，低端机会直接卡死或丢掉 WebGL 上下文 —— 表现就是
+   「打开手机什么都看不到」。这里只改默认值，玩家手动选的档位仍然优先，
+   帧率自动升降档也照旧生效。 */
+function defaultTier() {
+  try {
+    var cores = navigator.hardwareConcurrency || 4;
+    var mem = navigator.deviceMemory || 0;                 /* 只有 Chromium 内核提供 */
+    var mobile = /Android|iPhone|iPad|iPod|Mobile|HarmonyOS/i.test(navigator.userAgent) ||
+      (window.matchMedia && matchMedia('(pointer: coarse)').matches);
+    if (mobile) return (cores <= 4 || (mem && mem <= 4)) ? 0 : 1;
+    return cores <= 4 ? 1 : 2;
+  } catch (e) { return 1; }
+}
+var savedTier = null;
+try { savedTier = localStorage.getItem('zx3d_tier'); } catch (e) { savedTier = null; }
+let tier = (savedTier === null || savedTier === '')
+  ? defaultTier()
+  : Math.max(0, Math.min(2, parseInt(savedTier, 10) || 0));
 
 const canvas = document.getElementById('stage');
 const renderer = new THREE.WebGLRenderer({ canvas, antialias: tier >= 1, powerPreference: 'high-performance' });
+
+/* 上下文丢失（手机内存吃紧时很常见）：不处理就会停在最后一帧或黑屏，
+   所以主动报错，让看门狗给出「进 2D 版 / 重试」的出口。 */
+canvas.addEventListener('webglcontextlost', function (e) {
+  e.preventDefault();
+  if (window.__LX3D_FAIL) window.__LX3D_FAIL('显卡上下文丢失（设备内存不足）');
+}, false);
 renderer.outputColorSpace = THREE.SRGBColorSpace;
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
 /* 曝光压到 0.88：模型本身是接近纯白的袍子，配上 Bloom 很容易糊成一团白光 */
@@ -1551,6 +1595,80 @@ setTimeout(() => { el('loading').classList.add('done');
   addLog('拖动画布环视 · 点「开战」开始挂机', 'sk');
   if (G.state.auto) el('hint').style.opacity = '0'; }, 500);
 requestAnimationFrame(loop);
+</script>
+
+<script nomodule>
+/* 浏览器连 ES 模块都不支持（很旧的机型 / 极简内核）：不给它留黑底转圈的余地，
+   直接说明原因并把人送到 2D 完整版。 */
+(function () {
+  var t = document.getElementById('ltxt'), s = document.getElementById('lsub'), b = document.getElementById('loading');
+  if (b) b.classList.add('gaveup');
+  if (t) t.textContent = '这台设备的浏览器版本过旧';
+  if (s) s.innerHTML = '它不支持网页 3D 所需的模块脚本。<br />2D 版是同一个游戏、同一份存档。' +
+    '<div class="lx-exit"><a href="game2d.html">进入 2D 完整版</a></div>';
+})();
+</script>
+
+<script>
+/* ---------------- 兜底看门狗（普通脚本：模块没跑起来时它照样执行） ----------------
+   3D 页的全部逻辑都在 <script type="module"> 里。只要模块因为任何原因没有执行 ——
+   浏览器不支持 importmap、WebGL 被禁用、脚本被拦截、某个依赖 404 ——
+   页面就只剩「黑底 + 转圈」，玩家看到的是「连人物和怪物都没有」且完全无从判断原因
+   （2026-09-27 用户实测反馈即为此现象）。
+   这段脚本做两件事：① 把真实报错显示在屏幕上（便于反馈定位）；
+   ② 起不来时给出可点的出口，绝不留一个永远转圈的黑屏。 */
+(function () {
+  var deadline = Date.now() + 9000;      /* 9 秒还没起 → 判定失败（模型大也只是后台加载，不影响启动） */
+  var why = '';
+  var box = document.getElementById('loading');
+  var t = document.getElementById('ltxt');
+  var s = document.getElementById('lsub');
+
+  function paint(force) {
+    if (!box || box.classList.contains('gaveup')) return;
+    if (!force && window.__LX3D_BOOT) return;   /* 模块其实起来了，别抢 */
+    box.classList.add('gaveup');
+    if (t) t.textContent = '3D 洞天没能启动';
+    if (s) {
+      s.innerHTML = (why ? '<span style="color:#78716c">' + String(why).slice(0, 160) + '</span><br />' : '') +
+        '多半是浏览器不支持网页 3D（WebGL）或版本较旧。<br />' +
+        '2D 版是同一个游戏、同一份存档，功能完整。' +
+        '<div class="lx-exit"><a href="game2d.html">进入 2D 完整版</a>' +
+        '<a class="dim" href="javascript:location.reload()">重试</a></div>';
+    }
+  }
+
+  /* 把报错抓下来：脚本 404 / import 解析失败 / WebGL 创建失败都会走到这两个钩子 */
+  addEventListener('error', function (e) {
+    if (window.__LX3D_BOOT) return;
+    if (e && e.message) why = e.message;
+    else if (e && e.target && e.target.src) why = '资源加载失败：' + String(e.target.src).split('/').pop();
+  }, true);
+  addEventListener('unhandledrejection', function (e) {
+    if (window.__LX3D_BOOT) return;
+    var r = e && e.reason;
+    why = (r && (r.message || r.toString && r.toString())) || '未知错误';
+  });
+
+  /* WebGL 能力先探一次：明确不可用时立刻给出口，不用干等 9 秒 */
+  try {
+    var probe = document.createElement('canvas');
+    var gl = probe.getContext('webgl2') || probe.getContext('webgl') || probe.getContext('experimental-webgl');
+    if (!gl) {
+      why = '此浏览器未启用 WebGL';
+      setTimeout(paint, 300);
+      return;
+    }
+  } catch (e) { /* 探测本身失败也只在超时后处理 */ }
+
+  var timer = setInterval(function () {
+    if (window.__LX3D_BOOT) { clearInterval(timer); return; }
+    if (Date.now() > deadline) { clearInterval(timer); paint(); }
+  }, 500);
+
+  /* 模块内部主动报错时也能走同一套出口（例如 WebGL 上下文丢失） */
+  window.__LX3D_FAIL = function (msg) { why = msg || why; paint(true); };
+})();
 </script>
 </body>
 </html>

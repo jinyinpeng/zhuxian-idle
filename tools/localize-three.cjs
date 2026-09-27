@@ -75,7 +75,16 @@ for (const rel of seen) {
   if (!fs.existsSync(src)) continue;
   const dst = path.join(OUT, 'addons', rel);
   fs.mkdirSync(path.dirname(dst), { recursive: true });
-  fs.copyFileSync(src, dst);
+  /* 关键：把 addon 里的裸名 import 'three' 改写成指向本地本体的相对路径。
+     裸名必须靠 importmap 解析，而 importmap 直到 Chrome 89 / Safari 16.4 才支持：
+     微信内置浏览器与旧安卓 WebView 会直接解析失败 → 模块不执行 → 页面永远停在
+     「正在构筑洞天…」（玩家看到的是「一片黑，连人物和怪物都没有」）。
+     改成相对路径后整条依赖链不再需要 importmap。 */
+  const code = fs.readFileSync(src, 'utf8');
+  const relToCore = path.relative(path.dirname(dst), path.join(OUT, coreName)).replace(/\\/g, '/');
+  const patched = code.replace(/(\bfrom\s*)(['"])three\2/g,
+    (m, pre, q) => pre + q + (relToCore.startsWith('.') ? relToCore : './' + relToCore) + q);
+  fs.writeFileSync(dst, patched);
   total += fs.statSync(dst).size;
 }
 
@@ -85,9 +94,12 @@ console.log('=== three.js 本地化完成 ===');
 console.log('  输出 = assets/three/');
 console.log('  文件数 = ' + (seen.size + 1) + '（含 three 本体）');
 console.log('  合计 = ' + (total / 1024 / 1024).toFixed(2) + ' MB');
-console.log('  third-party 裸名 import = ' + (unexpected.length ? '⚠ ' + unexpected.join(', ') : '无（只有 three，已由 importmap 覆盖）'));
+console.log('  third-party 裸名 import = ' + (unexpected.length ? '⚠ ' + unexpected.join(', ') : '无'));
+console.log('  裸名 import \'three\' → 已改写为相对路径（不再依赖 importmap）');
 if (missing.length) console.log('  ⚠ 缺失文件 = ' + missing.join(', '));
-console.log('\n  importmap 应写成：');
-console.log('    { "imports": { "three": "assets/three/three.module.min.js",');
-console.log('                   "three/addons/": "assets/three/addons/" } }');
+console.log('\n  play3d.html 的 import 直接用相对路径，例如：');
+console.log("    import * as THREE from './assets/three/three.module.min.js';");
+console.log("    import { OrbitControls } from './assets/three/addons/controls/OrbitControls.js';");
+console.log('  （若仍保留 importmap，注意它的「值」必须是 URL，要以 ./ 开头；');
+console.log('    写成 "assets/three/…" 会被当作裸说明符整条忽略）');
 process.exit(unexpected.length || missing.length ? 1 : 0);
