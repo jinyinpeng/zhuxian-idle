@@ -1009,7 +1009,7 @@ function updateMobs(dt, now) {
    待机只有 ±0.03 世界单位（模型高 3.55 ⇒ 屏幕上约 1.5px），举剑只抬 0.14 + 转 3.4°。
    GLB 是单体网格、动不了骨骼，那就把整身幅度提到"看得出来"的量级，
    再用呼吸缩放 + 重心缓慢转移把生命感补出来。 */
-const pose = { arm: 0, armT: 0, swing: 0, hit: 0, ph: Math.random() * 6.28 };
+const pose = { arm: 0, armT: 0, swing: 0, hit: 0, ph: Math.random() * 6.28, draw: 0, drawT: 0, slot: -1 };
 /* 周期性"小动作"：光靠呼吸与重心转移，看久了仍然像摆件；
    每隔 4.5–9.5 秒来一次 0.9 秒的小动作（侧身看一眼 / 抖袖换重心 / 俯身点头），
    单网格也能做出"这人活着"的读感。 */
@@ -1032,7 +1032,7 @@ function fidgetPose() {
   return { z: -0.07 * k, x: 0, y: -0.035 * k, yaw: -0.22 * k };                  /* 另一侧侧身 */
 }
 /* 举剑剑光挂在与主角同级、且不会被"换模型时清空 heroRoot"误伤的分组上 */
-let heroFx = null, raiseGlow = null;
+let heroFx = null, raiseGlow = null, swordPivot = null, swordGlow = null;
 (function buildHeroFx() {
   heroFx = new THREE.Group();
   characters.add(heroFx);
@@ -1041,7 +1041,23 @@ let heroFx = null, raiseGlow = null;
       blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide }));
   raiseGlow.position.set(-0.42, 3.5, 0.1);
   heroFx.add(raiseGlow);
+  buildSword();
 })();
+/* 独立的剑：GLB 主角的剑与身体同层，拔不出来也劈不下去，
+   所以在这把程序化的剑上做真动作 —— 平时收在腰侧，出招时拔剑、抡劈。 */
+function buildSword() {
+  swordPivot = new THREE.Group();
+  swordPivot.position.set(-0.45, 2.3, 0.12);
+  heroFx.add(swordPivot);
+  const bl = new THREE.Mesh(new THREE.BoxGeometry(0.085, 1.5, 0.02),
+    new THREE.MeshStandardMaterial({ color: 0xe8f2f6, metalness: 0.85,
+      roughness: 0.18, emissive: 0x5eead4, emissiveIntensity: 0.6 }));
+  bl.position.y = 0.95;
+  /* 只在"拔剑"时显形：GLB 主角本身已带剑，常驻会出现两把剑 */
+  bl.material.transparent = true; bl.material.opacity = 0; bl.material.depthWrite = false;
+  swordGlow = bl;
+  swordPivot.add(bl);
+}
 function applyPose(dt) {
   const now = performance.now();
   stepFidget(dt);
@@ -1075,6 +1091,13 @@ function applyPose(dt) {
   if (heroFx) {
     heroFx.position.set(heroRoot.position.x, heroRoot.position.y, heroRoot.position.z);
     heroFx.rotation.y = heroRoot.rotation.y;
+    pose.draw += (pose.drawT - pose.draw) * Math.min(1, dt * 11);
+    if (swordPivot) {
+      const d = pose.draw;
+      swordPivot.rotation.z = -1.25 + d * 1.9 - pose.swing * 1.5;
+      swordPivot.rotation.x = -0.25 - d * 0.5 - pose.swing * 0.4;
+      if (swordGlow) swordGlow.material.opacity = Math.min(1, Math.max(d, lift));
+    }
     if (raiseGlow) {
       raiseGlow.material.opacity = lift * (0.5 + Math.sin(now * 0.012) * 0.18);
       raiseGlow.scale.set(1 + lift * 0.3, 0.7 + lift * 0.5, 1 + lift * 0.3);
@@ -1098,14 +1121,32 @@ function applyPose(dt) {
 /* ---------- 9. 事件：全部来自 core.js，与 2D 版同一批 ---------- */
 G.on('raise', on => {
   pose.armT = on ? 1 : 0;
+  pose.drawT = on ? 1 : 0;
   if (on) { toast('举剑'); flash(COL.getHex(), 12, 320); spawnParticles(heroRoot.position, 22, COL.getStyle(), 1.1, true); }
 });
+/* 技能特效：按技能位（s1..s5）给五种不同的形态与节奏，不再是"一圈涟漪打天下" */
+function skillFx(key, color) {
+  const slot = Math.max(0, Math.min(4, (parseInt(String(key || 's1').slice(1), 10) || 1) - 1));
+  const H = heroRoot.position;
+  if (slot === 0) {
+    spawnParticles(H, 30, color, 2.6, true);
+    shockwave(H, color, 3.0);
+  } else if (slot === 1) {
+    spawnParticles(H, 34, color, 1.0, true);
+  } else if (slot === 2) {
+    spawnParticles(H, 20, '#4ade80', 0.8, true);
+  } else if (slot === 3) {
+    spawnParticles(H, 40, color, 3.2, true);
+  } else {
+    spawnParticles(H, 60, color, 4.2, true);
+  }
+}
 G.on('skill', s => {
   pose.swing = 1;
   toast(s.name || '技能', SECT.color);
   flash(COL.getHex(), 16, 260);
-  spawnParticles(heroRoot.position, 26, SECT.color, 1.3, true);
-  shockwave(heroRoot.position, SECT.color, 2.6);
+  pose.drawT = 1;                                   /* 拔剑 */
+  skillFx(s && s.key, SECT.color);
 });
 G.on('damage', d => {
   if (d.heal) {
