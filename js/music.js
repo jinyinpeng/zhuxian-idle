@@ -17,9 +17,22 @@
   let ac = null, master = null, wet = null, dryGain = null, timer = null;
   let on = false, step = 0, nextTime = 0, vol = 0.5;
 
-  /* D 调五声音阶（宫商角徵羽）三个八度 */
+  /* D 调五声音阶（宫商角徵羽）四个八度。
+     注意：末尾必须留足音级 —— 琶音与经过句会取到 chord(最大 6) + 7 + 音级(最大 6) = 19，
+     原先只到 880.00（下标 13），越界拿到 undefined 后 `frequency.value = undefined`
+     会抛 TypeError，把整个调度器打断 → 音乐一声不出、控制台每拍刷一条报错。 */
   const SCALE = [146.83, 164.81, 196.00, 220.00, 246.94, 293.66, 329.63, 392.00,
-    440.00, 493.88, 587.33, 659.25, 783.99, 880.00];
+    440.00, 493.88, 587.33, 659.25, 783.99, 880.00,
+    987.77, 1174.66, 1318.51, 1567.98, 1760.00, 1975.53, 2349.32];
+  /* 取音级：越界一律折算回音域内（宁可低八度，也不要 undefined） */
+  function tone(i) {
+    const n = SCALE.length;
+    let k = Math.round(i);
+    if (!isFinite(k)) return SCALE[7];
+    while (k >= n) k -= 12;
+    while (k < 0) k += 12;
+    return SCALE[k];
+  }
   /* 主旋律：8 音记忆点，第二句换尾音（这就是"上口"的地方） */
   const HOOK = [7, 9, 8, 7, 5, 7, 8, -1];
   const HOOK_B = [7, 9, 10, 9, 8, 7, 5, -1];
@@ -52,8 +65,15 @@
     return ac;
   }
 
+  /* 音色函数的统一前置检查：非有限/非正的频率或音量一律跳过。
+     一行守卫就能避免「一个越界下标把整个音乐调度器打死」这类事故。 */
+  function bad(freq, gain) {
+    return !isFinite(freq) || freq <= 0 || !isFinite(gain) || gain <= 0;
+  }
+
   /* 古筝拨弦 */
   function pluck(freq, when, dur, gain) {
+    if (bad(freq, gain)) return;
     const o1 = ac.createOscillator(), o2 = ac.createOscillator(), g = ac.createGain();
     o1.type = 'triangle'; o1.frequency.value = freq;
     o2.type = 'sine'; o2.frequency.value = freq * 2.01;
@@ -69,6 +89,7 @@
 
   /* 短促的"木鱼/琵琶"颗粒，用来打拍子（比沙锤更有仙侠味） */
   function ticktock(freq, when, gain) {
+    if (bad(freq, gain)) return;
     const o = ac.createOscillator(), g = ac.createGain(), f = ac.createBiquadFilter();
     o.type = 'square'; o.frequency.value = freq;
     f.type = 'bandpass'; f.frequency.value = freq * 2; f.Q.value = 3;
@@ -81,6 +102,7 @@
 
   /* 洞箫铺底 */
   function pad(freq, when, dur, gain) {
+    if (bad(freq, gain)) return;
     const o = ac.createOscillator(), o2 = ac.createOscillator(), g = ac.createGain();
     const f = ac.createBiquadFilter();
     o.type = 'sawtooth'; o.frequency.value = freq;
@@ -95,6 +117,7 @@
 
   /* 底鼓：让挂机有推进感的关键 */
   function kick(when, gain) {
+    if (!isFinite(gain) || gain <= 0 || !isFinite(when)) return;
     const o = ac.createOscillator(), g = ac.createGain();
     o.type = 'sine';
     o.frequency.setValueAtTime(138, when);
@@ -108,6 +131,7 @@
 
   /* 远处战鼓（旧版保留，用在乐句转折处） */
   function drum(when, gain) {
+    if (!isFinite(gain) || gain <= 0 || !isFinite(when)) return;
     const o = ac.createOscillator(), g = ac.createGain();
     o.type = 'sine';
     o.frequency.setValueAtTime(150, when);
@@ -135,29 +159,29 @@
       const n = Math.floor(s / 4);
       const line = ph === 2 ? HOOK_B : (ph === 3 ? HOOK_HI : HOOK);
       const v = line[n];
-      if (v >= 0) pluck(SCALE[v], t0, 1.45, 0.17);
+      if (v >= 0) pluck(tone(v), t0, 1.45, 0.17);
     }
     /* ② 琶音跑动：每个"和拍"补一个八度和音，像筝的扫弦，给出持续推力 */
     if (s % 2 === 1) {
-      pluck(SCALE[chord + 7 + ARP[(s >> 1) % ARP.length]], t0 + 0.02, 0.5, 0.05);
+      pluck(tone(chord + 7 + ARP[(s >> 1) % ARP.length]), t0 + 0.02, 0.5, 0.05);
     }
     /* ③ 低音 + 底鼓：每拍一记，落在拍头上（律动的骨架） */
     if (s % 4 === 0) {
-      pad(SCALE[chord] / 2, t0, BEAT * 0.94, 0.075);
+      pad(tone(chord) / 2, t0, BEAT * 0.94, 0.075);
       kick(t0, s === 0 ? 0.2 : 0.13);
     }
     /* ④ 打点：二四拍的反拍加"木鱼"，给出摇摆感 */
     if (s === 6 || s === 14) ticktock(880, t0, 0.05);
     if (s === 2 || s === 10) ticktock(660, t0 + BEAT * 0.5, 0.035);
     /* ⑤ 和弦铺底：每小节一次 */
-    if (s === 0) pad(SCALE[chord + 7], t0, BAR * 1.02, 0.028);
+    if (s === 0) pad(tone(chord + 7), t0, BAR * 1.02, 0.028);
     /* ⑥ 经过句：每 8 小节末尾来一记战鼓 + 上行五音，卡在"刚收完一波怪"的节奏上 */
     if (b % 8 === 7) {
       if (s === 0) drum(t0, 0.18);
-      if (s >= 12 && s < 16) pluck(SCALE[chord + DEG[s - 12] + 7], t0, 0.42, 0.1);
+      if (s >= 12 && s < 16) pluck(tone(chord + DEG[s - 12] + 7), t0, 0.42, 0.1);
     }
     /* ⑦ 亮点：每 16 小节一次高音泛音，给长时间挂机一个"奖励" */
-    if (s === 0 && b % 16 === 15) pluck(SCALE[13], t0 + BEAT * 2, 2.2, 0.085);
+    if (s === 0 && b % 16 === 15) pluck(tone(13), t0 + BEAT * 2, 2.2, 0.085);
   }
 
   /* 用 AudioContext 的时钟提前排（比 setInterval 现算稳，不会抖） */

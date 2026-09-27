@@ -58,6 +58,7 @@
 
     bindGame();
     applyMode();
+    syncMotionClass();     /* 先把「动态效果」开关同步给 CSS，再挂动作层 */
     mountHeroSkeleton();   /* v22：骨骼角色（默认关闭） */
     mountHeroFig();        /* v23：立绘动作（默认启用，形象不变） */
     setRegion(G.regionOf(G.state.region));
@@ -358,10 +359,37 @@
   /* ===================== v23：立绘动作（形象不变，只加动作） =====================
      把原立绘放进「地面→腰→转身→体」的关节层级里，由 FigureMotion 驱动：
      呼吸起伏、重心转移、前倾后仰、扭腰、3D 转身、起跳与落地缓冲。 */
+  /* 立绘动作开关。优先级（从高到低）：
+     ① 玩家在「设置 · 动态效果」里显式打开 → 一律开启（要用它盖过手机的「减弱动态效果」）；
+     ② 玩家显式关闭（figureMotion === false）→ 关闭；
+     ③ 否则跟随系统偏好。
+     手机开了「减弱动态效果 / 移除动画」时，系统偏好会让立绘动作整个不挂载、CSS 待机动画
+     也被 animation:none 关掉 —— 表现就是「人站着不动、剑举不起来、技能只剩静止色块」。
+     所以必须给玩家一个能自己打开的开关，并同步 html.motion-force 让 CSS 也跟着放开。 */
+  function motionForced() {
+    const s = (G.state && G.state.settings) || {};
+    return s.motionForce === true;
+  }
   function figMotionOn() {
     if (skelOn()) return false;                       /* 换成骨骼小人时不重复驱动 */
+    const s = (G.state && G.state.settings) || {};
+    if (s.motionForce === true) return true;          /* ① 玩家显式开启：盖过系统偏好 */
     if (global.matchMedia && global.matchMedia('(prefers-reduced-motion: reduce)').matches) return false;
-    return !(G.state && G.state.settings && G.state.settings.figureMotion === false);
+    return s.figureMotion !== false;                  /* ② 玩家显式关闭 / ③ 跟随系统 */
+  }
+  /* 把「动态效果」开关同步给 CSS：html.motion-force 下，减弱动画的媒体查询不再生效 */
+  function syncMotionClass() {
+    try { document.documentElement.classList.toggle('motion-force', motionForced()); } catch (e) { }
+  }
+  /* 设置里切换「动态效果」后调用：卸载再按新判定重新挂载立绘动作 */
+  function refreshMotion() {
+    if (heroFig && heroFig.destroy) { try { heroFig.destroy(); } catch (e) { } }
+    heroFig = null;
+    mobFigs.forEach(function (f) { if (f && f.destroy) { try { f.destroy(); } catch (e) { } } });
+    mobFigs = [];
+    syncMotionClass();
+    mountHeroFig();
+    mountMobFigs();
   }
   function mountFigMotion(node) {
     if (!figMotionOn() || !global.FigureMotion) return null;
@@ -734,13 +762,36 @@
     setTimeout(function () { d.remove(); }, big ? 660 : 470);
   }
 
-  /* 命中白闪 */
+  /* 命中轻闪（原来那版是 brightness(3.1) + 去饱和的白闪，怪瞬间变成一块死白色块；
+     现在只留一点点提亮 + 红边，主体表现交给下面的血花） */
   function hitFlash(node) {
     if (!node) return;
     node.classList.remove('flash');
     void node.offsetWidth;
     node.classList.add('flash');
     setTimeout(function () { if (node) node.classList.remove('flash'); }, 200);
+  }
+
+  /* 爆血：命中时在怪物身上溅出一片血花。
+     位置、大小、溅开方向都随机 —— 同一只怪连续挨打不会看到重复图案。 */
+  function bloodHit(node, crit) {
+    if (!node) return;
+    const av = node.querySelector('.avatar') || node;
+    const b = document.createElement('div');
+    b.className = 'blood-hit' + (crit ? ' crit' : '');
+    const n = crit ? 7 : 5;
+    let html = '';
+    for (let i = 0; i < n; i++) {
+      const x = 16 + Math.random() * 68, y = 20 + Math.random() * 48;
+      const s = (10 + Math.random() * 20) * (crit ? 1.35 : 1);
+      const dx = (Math.random() * 2 - 1) * 28, dy = -(8 + Math.random() * 26);
+      html += '<i style="left:' + x.toFixed(1) + '%;top:' + y.toFixed(1) + '%;width:' + s.toFixed(0) +
+        'px;height:' + s.toFixed(0) + 'px;--dx:' + dx.toFixed(0) + 'px;--dy:' + dy.toFixed(0) +
+        'px;animation-delay:' + (i * 14) + 'ms"></i>';
+    }
+    b.innerHTML = html;
+    av.appendChild(b);
+    setTimeout(function () { b.remove(); }, crit ? 660 : 540);
   }
 
   /* 突破：主角身上升起金光柱 + 全屏泛光 */
@@ -1134,6 +1185,7 @@
         if (d.skill) slash('mob', mi);
         else swingArc();                     /* 普攻：给一记挥击弧光 */
         burst('mob', d.crit ? '#fde047' : '#fca5a5', d.crit ? 20 : 11, mi);
+        bloodHit(node, d.crit);              /* 爆血：命中主要表现 */
         hitFlash(node);
         setMobPose(mi, 'hurt');              /* v22：怪物受击骨骼动作 */
         setMobFigPose(mi, 'hurt');           /* v23：怪物立绘受击 */
@@ -1276,8 +1328,8 @@
   global.Render = {
     init, frame, toast, setRegion, refreshHud, refreshHeroBase,
     ic, esc, floatText, burst, pushLog, unitPos, renderMobs, mobNode, skillBurst,
-    shakeStage, impactRingAt, hitFlash, levelFx, dropBeam, castPose,
-    setDayMode, applyMode, isDay, rebuildHero,
+    shakeStage, impactRingAt, hitFlash, bloodHit, levelFx, dropBeam, castPose,
+    setDayMode, applyMode, isDay, rebuildHero, refreshMotion, figMotionOn,
     mountHeroSkeleton, setHeroPose, mountMobSkeletons, setMobPose, alignGround, walkBriefly,
     mountHeroFig, mountMobFigs, setFigPose, setMobFigPose,
     treasureSvg, swordFly

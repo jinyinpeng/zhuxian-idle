@@ -1058,6 +1058,14 @@
           '<div class="s-main"><div class="s-name">日间模式</div><div class="s-desc">关闭后切换为夜间山景（月光、星空）</div></div>' +
           '<div class="switch' + (G.state.settings.dayMode !== false ? ' on' : '') + '" data-daymode="1"></div>' +
         '</div>' +
+        /* 动态效果如图标：手机开了「减弱动态效果 / 移除动画」时，系统的可访问性设置会
+           让立绘动作系统不挂载、CSS 待机动画被关掉，玩家会看到「人不动、剑不举、
+           技能只剩静止色块」。这一项打开后会盖过系统偏好。 */
+        '<div class="set-row">' +
+          '<div class="s-main"><div class="s-name">动态效果</div>' +
+          '<div class="s-desc">立绘动作 · 出招 · 命中血花。若手机开了「减弱动态效果」导致人物不动，打开这一项即可恢复</div></div>' +
+          '<div class="switch' + (G.state.settings.motionForce === true ? ' on' : '') + '" data-motion="1"></div>' +
+        '</div>' +
         '<div class="section-title" style="margin-top:16px">账号 · 手机号</div>' +
         '<div class="ac-box">' +
           '<input id="ac-phone" class="ac-in" type="tel" inputmode="numeric" maxlength="11" placeholder="手机号" />' +
@@ -1243,6 +1251,17 @@
         R.setDayMode(on);
         n.classList.toggle('on', on);
         R.toast(on ? '已切换为日间' : '已切换为夜间', on ? 'gold' : 'jade');
+      });
+    });
+
+    /* 动态效果：切换后立即重新挂载/卸载立绘动作，并把偏好同步给 CSS */
+    el.modal.querySelectorAll('[data-motion]').forEach(n => {
+      n.addEventListener('click', () => {
+        const on = G.state.settings.motionForce !== true;
+        G.state.settings.motionForce = on;
+        n.classList.toggle('on', on);
+        if (R.refreshMotion) R.refreshMotion();
+        R.toast(on ? '动态效果已开启' : '动态效果已关闭', on ? 'gold' : 'jade');
       });
     });
 

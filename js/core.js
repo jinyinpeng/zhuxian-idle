@@ -127,7 +127,11 @@
         autoQuest: true,
         autoEnhance: true,
         autoSellQuality: -1,
-        logOn: true
+        logOn: true,
+        /* 动态效果：立绘动作 / 攻击特效 / 命中血花。
+           手机若开了「减弱动态效果」，浏览器会把动画与立绘动作系统一并关掉，
+           这一项由玩家手动打开后可盖过系统偏好（见 render.js 的 figMotionOn）。 */
+        motionForce: false
       },
       stats: {
         kills: 0, bossKills: 0, enhanceTotal: 0, levelUps: 0, deaths: 0,

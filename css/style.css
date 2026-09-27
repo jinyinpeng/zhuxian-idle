@@ -698,13 +698,39 @@ input { font-family: inherit; }
   100% { transform: translateX(0) rotate(0deg) scale(1); }
 }
 
-/* ⑤ 命中白闪（打中瞬间整体提亮） */
+/* ⑤ 命中轻闪 —— 只留一点提亮与红边。
+   原版是 brightness(3.1) + saturate(.35)：怪物被打中瞬间整只变成一块死白色块，
+   远看像贴图丢了（用户反馈“应该是爆血而不是色块”）。白闪退为辅助，主角交给血花。 */
 @keyframes hitFlash {
-  0%   { filter: brightness(3.1) saturate(.35) drop-shadow(0 0 15px #fff); }
+  0%   { filter: brightness(1.42) saturate(1.3) drop-shadow(0 0 12px rgba(255,92,92,.8)); }
   100% { filter: brightness(1) saturate(1) drop-shadow(0 8px 10px rgba(0,0,0,.66)); }
 }
 .unit.mob.flash .avatar .fig,
 .unit.hero.hurt .avatar .fig { animation: hitFlash .17s ease-out; }
+
+/* ⑤b 爆血：命中时溅出的血花（位置/大小/方向由 JS 随机给，这里负责表现） */
+.blood-hit { position: absolute; inset: 0; pointer-events: none; z-index: 5; overflow: visible; }
+.blood-hit i {
+  position: absolute; display: block; border-radius: 50%;
+  background: radial-gradient(circle at 36% 34%, #ff6b6b 0%, #c81e1e 52%, rgba(120,8,8,.15) 78%, transparent 80%);
+  box-shadow: 0 0 6px rgba(220,38,38,.55);
+  opacity: 0; transform: translate(0, 0) scale(.3);
+  animation: bloodSplat .46s cubic-bezier(.15,.75,.35,1) forwards;
+}
+.blood-hit.crit i {
+  background: radial-gradient(circle at 36% 34%, #ffd166 0%, #e0452b 46%, rgba(140,10,10,.18) 78%, transparent 80%);
+  box-shadow: 0 0 9px rgba(253,224,71,.6);
+}
+@keyframes bloodSplat {
+  0%   { opacity: .96; transform: translate(0, 0) scale(.25); }
+  55%  { opacity: .9; }
+  100% { opacity: 0; transform: translate(var(--dx, 0px), var(--dy, -18px)) scale(1.15); }
+}
+/* 立绘动作开启时才播血花；系统减弱动画且玩家没手动打开时，直接不显示，
+   免得静态残留成一块红斑（那种“色块”观感正是要避免的） */
+@media (prefers-reduced-motion: reduce) {
+  html:not(.motion-force) .blood-hit { display: none; }
+}
 
 /* ⑥ 屏幕震动（三档：轻 / 中 / 重，用 --sk 控制幅度） */
 .stage.shake-1 { --sk: 1;    animation: stageShake .15s linear; }
@@ -1612,8 +1638,13 @@ html, body { overscroll-behavior-y: auto; }
 
 /* ㉕ 八境专属动效也遵循「减少动态效果」 */
 @media (prefers-reduced-motion: reduce) {
-  .bamboo, .pond::after, .mist, .bat, .crack::after, .volc::after,
-  .bub, .miasma, .incense, .snow, .array, .bloodmist { animation: none !important; }
+  /* html.motion-force = 玩家在「设置 · 动态效果」里手动打开了动画，此时系统偏好让位 */
+  html:not(.motion-force) .bamboo, html:not(.motion-force) .pond::after,
+  html:not(.motion-force) .mist, html:not(.motion-force) .bat,
+  html:not(.motion-force) .crack::after, html:not(.motion-force) .volc::after,
+  html:not(.motion-force) .bub, html:not(.motion-force) .miasma,
+  html:not(.motion-force) .incense, html:not(.motion-force) .snow,
+  html:not(.motion-force) .array, html:not(.motion-force) .bloodmist { animation: none !important; }
 }
 
 /* ㉔ 尊重「减少动态效果」系统偏好 */
@@ -2628,7 +2659,9 @@ html.ui-busy .sheet, html.ui-busy .card, html.ui-busy .modal, html.ui-busy .pop 
   .hill { animation-duration: 22s; }
 }
 @media (prefers-reduced-motion: reduce) {
-  .clouds, .shaft, .haze, .qi, .stars { display: none; }
+  html:not(.motion-force) .clouds, html:not(.motion-force) .shaft,
+  html:not(.motion-force) .haze, html:not(.motion-force) .qi,
+  html:not(.motion-force) .stars { display: none; }
 }
 
 /* =========================================================================
