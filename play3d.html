@@ -385,9 +385,12 @@ try {
   offlineRep = G.offlineApply((Date.now() - (G.state.lastSave || Date.now())) / 1000);
 } catch (e) { /* 结算失败不影响进游戏 */ }
 
-const SECT = G.sectOf(G.state.sect) || { name: '青云门', color: '#5eead4' };
+/* 还没有角色时 G.state 为 null —— 这里必须先兜住。原来直接读 G.state.sect，
+   首次进入的新玩家会在 138ms 抛 TypeError 把整个模块打断（3D 页只剩黑屏 + HUD）。 */
+const ST0 = G.state || {};
+const SECT = (ST0.sect && G.sectOf(ST0.sect)) || { name: '青云门', color: '#5eead4' };
 const COL = new THREE.Color(SECT.color || '#5eead4');
-document.documentElement.dataset.sect = G.state.sect;
+document.documentElement.dataset.sect = ST0.sect || '';
 
 /* ---------- 画质档位（性能第一步：先定上限，再谈效果） ---------- */
 const TIERS = [
@@ -1177,7 +1180,8 @@ function applyPose(dt) {
   const lean = Math.sin(now * 0.0011 + 1.7) * 0.028;
   const fid = fidgetPose();
   pose.arm += (pose.armT - pose.arm) * Math.min(1, dt * 8);
-  const hold = G.raiseOn && G.raiseOn() ? 1 : 0;
+  /* 无角色时 G.state 为 null，core 的 raiseOn() 会抛错 —— 每帧都在调，必须兜住 */
+  const hold = (G.state && G.raiseOn && G.raiseOn()) ? 1 : 0;
   if (hold) pose.armT = 1; else if (pose.armT > 0.9) pose.armT = 0;
   const lift = Math.max(pose.arm, hold);
   const tgt = heroPivot || heroFallback;
@@ -1296,7 +1300,7 @@ const regionSel = el('region');
 REGIONS.forEach(r => {
   const o = document.createElement('option');
   o.value = r.id; o.textContent = r.name;
-  if (r.id === G.state.region) o.selected = true;
+  if (r.id === ST0.region) o.selected = true;      /* 无角色时不炸 */
   regionSel.appendChild(o);
 });
 /* ---------- 天气：雪 / 火星 / 雾滴 / 灵尘 ----------
@@ -1362,7 +1366,7 @@ function applyRegion(id) {
   seedWeather();
   layoutProps((r.range && r.range[0] ? r.range[0] : 7) * 9973);
 }
-applyRegion(G.state.region);
+applyRegion(ST0.region || 'r01');
 regionSel.addEventListener('change', () => {
   const id = regionSel.value;
   if (G.switchRegion) G.switchRegion(id, false);
@@ -1528,7 +1532,7 @@ el('fight').addEventListener('click', () => {
 });
 /* 「画质」按钮：本作已是纯 3D，原来这里跳 2D 版（2026-09-28 移除） */
 el('back2d').addEventListener('click', () => { el('quality').click(); });
-el('fight').textContent = G.state.auto ? '停战' : '开战';
+el('fight').textContent = (G.state && G.state.auto) ? '停战' : '开战';
 
 /* ============================================================================
    复用 2D 的面板体系（行囊 / 技能 / 任务 / 社交 / 设置 / 全部弹窗）
@@ -1786,7 +1790,7 @@ function pickChoice(c) {
 }
 let walking = 0, idleEncT = 60;
 function idleEncounter(dt) {
-  if (!G.state.auto || encOpen) return;
+  if (!G.state || !G.state.auto || encOpen) return;   /* 无角色时不触发奇遇 */
   idleEncT -= dt;
   if (idleEncT > 0) return;
   idleEncT = 100 + Math.random() * 90;                     /* 约 1.5~3 分钟一次 */
@@ -1809,7 +1813,7 @@ function loop(now) {
   stepParticles(dt);
   stepRings(dt);
   stepMists(dt);
-  hud(dt);
+  if (G.state && G.state.sect) hud(dt);   /* 无角色时 core 的 stats() 会抛错 */
   updateMobs(dt, now);
   stepWeather(dt);
   idleEncounter(dt);
@@ -1850,7 +1854,7 @@ addEventListener('resize', resize);
 resize();
 setTimeout(() => { el('loading').classList.add('done');
   addLog('拖动画布环视 · 点「开战」开始挂机', 'sk');
-  if (G.state.auto) el('hint').style.opacity = '0'; }, 500);
+  if (G.state && G.state.auto) el('hint').style.opacity = '0'; }, 500);
 requestAnimationFrame(loop);
 </script>
 
