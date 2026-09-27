@@ -188,7 +188,7 @@
     <button class="p3-btn" id="tabSet">设置</button>
   </div>
   <div style="display:flex;gap:8px;align-items:flex-end">
-    <button class="p3-btn" id="back2d">2D</button>
+    <button class="p3-btn" id="back2d">画质</button>
     <button class="p3-btn gold" id="fight">开战</button>
   </div>
 </div>
@@ -1377,11 +1377,8 @@ el('fight').addEventListener('click', () => {
   addLog(on ? '开始挂机' : '已停战', 'sk');
   try { window.Music && Music.start && Music.start(); } catch (e) { }
 });
-/* 2D 完整版现在叫 game2d.html（index.html 已改为默认进 3D 的入口页） */
-el('back2d').addEventListener('click', () => {
-  const v = (typeof LX_V !== 'undefined' && LX_V) ? ('?v=' + encodeURIComponent(LX_V)) : '';
-  location.href = 'game2d.html' + v;
-});
+/* 「画质」按钮：本作已是纯 3D，原来这里跳 2D 版（2026-09-28 移除） */
+el('back2d').addEventListener('click', () => { el('quality').click(); });
 el('fight').textContent = G.state.auto ? '停战' : '开战';
 
 /* ============================================================================
@@ -1715,8 +1712,8 @@ requestAnimationFrame(loop);
   var t = document.getElementById('ltxt'), s = document.getElementById('lsub'), b = document.getElementById('loading');
   if (b) b.classList.add('gaveup');
   if (t) t.textContent = '这台设备的浏览器版本过旧';
-  if (s) s.innerHTML = '它不支持网页 3D 所需的模块脚本。<br />2D 版是同一个游戏、同一份存档。' +
-    '<div class="lx-exit"><a href="game2d.html">进入 2D 完整版</a></div>';
+  if (s) s.innerHTML = '它不支持网页 3D 所需的模块脚本，请更新浏览器后再试。' +
+    '';
 })();
 </script>
 
@@ -1743,8 +1740,8 @@ requestAnimationFrame(loop);
     if (s) {
       s.innerHTML = (why ? '<span style="color:#78716c">' + String(why).slice(0, 160) + '</span><br />' : '') +
         '多半是浏览器不支持网页 3D（WebGL）或版本较旧。<br />' +
-        '2D 版是同一个游戏、同一份存档，功能完整。' +
-        '<div class="lx-exit"><a href="game2d.html">进入 2D 完整版</a>' +
+        '请更新浏览器，或点下面重试。' +
+        '<div class="lx-exit">' +
         '<a class="dim" href="javascript:location.reload()">重试</a></div>';
     }
   }
