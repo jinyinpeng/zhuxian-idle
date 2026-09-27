@@ -761,7 +761,26 @@ const pPos = new Float32Array(PMAX * 3), pCol = new Float32Array(PMAX * 3);
 const pVel = new Float32Array(PMAX * 3), pLife = new Float32Array(PMAX);
 pGeo.setAttribute('position', new THREE.BufferAttribute(pPos, 3));
 pGeo.setAttribute('color', new THREE.BufferAttribute(pCol, 3));
-const points = new THREE.Points(pGeo, new THREE.PointsMaterial({ size: 0.26, vertexColors: true,
+/* 粒子贴图：`THREE.Points` 不挂 map 时每个粒子就是**一个正方形**——
+   命中溅出来的那几个色点，远看就是一堆小方块（用户反馈的「色块」正是它）。
+   这里用 canvas 现画一张"中心亮、边缘透明"的圆形柔光贴图，方块立刻变光点/血点。 */
+function softDotTexture() {
+  const s = 64, c = document.createElement('canvas');
+  c.width = c.height = s;
+  const g = c.getContext('2d');
+  const rg = g.createRadialGradient(s / 2, s / 2, 0, s / 2, s / 2, s / 2);
+  rg.addColorStop(0, 'rgba(255,255,255,1)');
+  rg.addColorStop(0.34, 'rgba(255,255,255,.74)');
+  rg.addColorStop(0.72, 'rgba(255,255,255,.18)');
+  rg.addColorStop(1, 'rgba(255,255,255,0)');
+  g.fillStyle = rg; g.fillRect(0, 0, s, s);
+  const t = new THREE.CanvasTexture(c);
+  if (THREE.SRGBColorSpace) t.colorSpace = THREE.SRGBColorSpace;
+  return t;
+}
+const dotTex = softDotTexture();
+const points = new THREE.Points(pGeo, new THREE.PointsMaterial({ size: 0.3, vertexColors: true,
+  map: dotTex, alphaTest: 0.02,
   transparent: true, opacity: 0.95, blending: THREE.AdditiveBlending, depthWrite: false }));
 points.frustumCulled = false; scene.add(points);
 let pHead = 0;
@@ -807,6 +826,27 @@ function stepRings(dt) {
     r.m.scale.setScalar(0.4 + k * r.maxR);
     r.m.material.opacity = 0.9 * (1 - k);
     if (k >= 1) { scene.remove(r.m); r.m.material.dispose(); rings.splice(i, 1); }
+  }
+}
+/* 血雾：命中瞬间在伤口处炸开的一小片血红柔光，比单纯溅点更有"打到肉"的重量。
+   暴击时改用金色（与暴击配色一致）。 */
+const mists = [];
+function bloodMist(pos, crit) {
+  const sp = new THREE.Sprite(new THREE.SpriteMaterial({
+    map: dotTex, color: crit ? 0xfbbf24 : 0xd21f3c,
+    transparent: true, opacity: 0.85, blending: THREE.AdditiveBlending, depthWrite: false }));
+  sp.position.set(pos.x, pos.y + 1.25, pos.z);
+  sp.scale.setScalar(crit ? 1.5 : 1.1);
+  scene.add(sp);
+  mists.push({ m: sp, t: 0, base: crit ? 2.7 : 2.0 });
+}
+function stepMists(dt) {
+  for (let i = mists.length - 1; i >= 0; i--) {
+    const x = mists[i]; x.t += dt;
+    const k = Math.min(1, x.t / 0.42);
+    x.m.scale.setScalar(x.base * (0.5 + k * 1.05));
+    x.m.material.opacity = 0.85 * (1 - k) * (1 - k);
+    if (k >= 1) { scene.remove(x.m); x.m.material.dispose(); mists.splice(i, 1); }
   }
 }
 function addLog(txt, cls) {
@@ -964,22 +1004,81 @@ function updateMobs(dt, now) {
   });
 }
 
-/* ---------- 8. 姿态：核心是"把剑举起来"再劈下去 ---------- */
-const pose = { arm: 0, armT: 0, swing: 0, hit: 0 };
+/* ---------- 8. 姿态：待机要"活"、举剑要看得见、出招要够狠 ----------
+   用户反馈「人物还是没有动啊，很呆板」——根因是动作幅度按"别穿帮"的思路压得太死：
+   待机只有 ±0.03 世界单位（模型高 3.55 ⇒ 屏幕上约 1.5px），举剑只抬 0.14 + 转 3.4°。
+   GLB 是单体网格、动不了骨骼，那就把整身幅度提到"看得出来"的量级，
+   再用呼吸缩放 + 重心缓慢转移把生命感补出来。 */
+const pose = { arm: 0, armT: 0, swing: 0, hit: 0, ph: Math.random() * 6.28 };
+/* 周期性"小动作"：光靠呼吸与重心转移，看久了仍然像摆件；
+   每隔 4.5–9.5 秒来一次 0.9 秒的小动作（侧身看一眼 / 抖袖换重心 / 俯身点头），
+   单网格也能做出"这人活着"的读感。 */
+const fidget = { t: 3 + Math.random() * 4, kind: 0, run: 0 };
+function stepFidget(dt) {
+  if (fidget.run > 0) { fidget.run -= dt; return; }
+  fidget.t -= dt;
+  if (fidget.t <= 0) {
+    fidget.kind = (Math.random() * 4) | 0;
+    fidget.run = 0.9;
+    fidget.t = 4.5 + Math.random() * 5;
+  }
+}
+function fidgetPose() {
+  if (fidget.run <= 0) return { z: 0, x: 0, y: 0, yaw: 0 };
+  const k = Math.sin((0.9 - fidget.run) / 0.9 * Math.PI);      /* 0→1→0 的包络 */
+  if (fidget.kind === 0) return { z: 0, x: 0, y: 0.03 * k, yaw: 0.34 * k };      /* 侧身看一眼 */
+  if (fidget.kind === 1) return { z: 0.085 * k, x: 0, y: 0.055 * k, yaw: 0 };    /* 抖袖 · 换重心 */
+  if (fidget.kind === 2) return { z: 0, x: 0.11 * k, y: -0.02 * k, yaw: 0 };     /* 俯身点头 */
+  return { z: -0.07 * k, x: 0, y: -0.035 * k, yaw: -0.22 * k };                  /* 另一侧侧身 */
+}
+/* 举剑剑光挂在与主角同级、且不会被"换模型时清空 heroRoot"误伤的分组上 */
+let heroFx = null, raiseGlow = null;
+(function buildHeroFx() {
+  heroFx = new THREE.Group();
+  characters.add(heroFx);
+  raiseGlow = new THREE.Mesh(new THREE.CylinderGeometry(0.055, 0.02, 3.4, 8, 1, true),
+    new THREE.MeshBasicMaterial({ color: 0xfff3c4, transparent: true, opacity: 0,
+      blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide }));
+  raiseGlow.position.set(-0.42, 3.5, 0.1);
+  heroFx.add(raiseGlow);
+})();
 function applyPose(dt) {
-  const idle = Math.sin(performance.now() * 0.0016) * 0.03;
-  heroRoot.position.y = idle;
+  const now = performance.now();
+  stepFidget(dt);
+  /* 呼吸：起伏比原版放大 3.5 倍，再给"胸腔"一点纵向缩放 —— 单网格也能读出在呼吸 */
+  const bre = Math.sin(now * 0.0016 + pose.ph);
+  heroRoot.position.y = bre * 0.105;
+  /* 重心：缓慢左右转移（周期约 8.7s），不再永远定在同一个姿势 */
+  const sway = Math.sin(now * 0.00072 + pose.ph) * 0.075;
+  const lean = Math.sin(now * 0.0011 + 1.7) * 0.028;
+  const fid = fidgetPose();
   pose.arm += (pose.armT - pose.arm) * Math.min(1, dt * 8);
   const hold = G.raiseOn && G.raiseOn() ? 1 : 0;
   if (hold) pose.armT = 1; else if (pose.armT > 0.9) pose.armT = 0;
   const lift = Math.max(pose.arm, hold);
   const tgt = heroPivot || heroFallback;
   if (tgt) {
-    /* 举剑：整体上提 + 前倾（GLB 是单体网格，剑与身同体，所以抬的是整个人） */
-    heroRoot.rotation.z = lift * 0.06 - pose.swing * 0.16 + (pose.hit > 0 ? -0.2 * (pose.hit / 0.3) : 0);
-    heroRoot.rotation.x = -pose.swing * 0.1;
-    heroRoot.position.y += lift * 0.14 - pose.swing * 0.06;
-    heroRoot.rotation.y = -0.95 + (hold ? -0.12 : 0);
+    /* 举剑：整体上提 0.42（约身高的 12%）+ 后仰 12.6° + 侧倾。
+       GLB 剑与身同体、抬不了手臂，所以另补一道自手部上冲的剑光（raiseGlow）。 */
+    if (heroPivot) {
+      const sy = 1 + bre * 0.016;
+      heroPivot.scale.set(1 - bre * 0.008, sy, 1 - bre * 0.008);
+    }
+    heroRoot.rotation.z = sway + fid.z + lean * 0.5 + lift * 0.13 - pose.swing * 0.38
+      + (pose.hit > 0 ? -0.34 * (pose.hit / 0.3) : 0);
+    heroRoot.rotation.x = lean + fid.x - lift * 0.22 - pose.swing * 0.22;
+    heroRoot.rotation.y = -0.95 + Math.sin(now * 0.00062) * 0.07 + fid.yaw + (hold ? -0.1 : 0);
+    heroRoot.position.y += fid.y + lift * 0.42 - pose.swing * 0.1;
+    if (hold) heroRoot.position.y += Math.sin(now * 0.006) * 0.03;   /* 蓄势时轻微发抖 */
+  }
+  /* 剑光跟着主角走，只在举剑时亮起 */
+  if (heroFx) {
+    heroFx.position.set(heroRoot.position.x, heroRoot.position.y, heroRoot.position.z);
+    heroFx.rotation.y = heroRoot.rotation.y;
+    if (raiseGlow) {
+      raiseGlow.material.opacity = lift * (0.5 + Math.sin(now * 0.012) * 0.18);
+      raiseGlow.scale.set(1 + lift * 0.3, 0.7 + lift * 0.5, 1 + lift * 0.3);
+    }
   }
   if (pose.swing > 0) pose.swing = Math.max(0, pose.swing - dt / 0.24);
   if (pose.hit > 0) pose.hit -= dt;
@@ -1018,8 +1117,14 @@ G.on('damage', d => {
     const a = mobAnchor(d.idx || 0).clone();
     const hitGr = mobMeshes.get(d.idx || 0);
     if (hitGr) hitGr.userData.recoil = 1;      /* 挨打往后一顿 */
-    spawnParticles(a, d.crit ? 22 : 11, d.crit ? '#fde047' : SECT.color, 2.2, true);
-    shockwave(a, d.crit ? '#fde047' : SECT.color, d.crit ? 2.8 : 1.8);
+    /* 爆血：命中要见血。原来溅的是门派主色（青云门=青绿），打怪像在放烟花，
+       用户反馈「怪物应该是爆血而不是色块」—— 现在血花用红、暴击用金，
+       再叠一层深色血点做层次，最后补一片血雾。 */
+    const blood = d.crit ? '#fbbf24' : '#e11d48';
+    spawnParticles(a, d.crit ? 26 : 17, blood, 2.4, true);
+    spawnParticles(a, d.crit ? 10 : 6, '#7f1d1d', 1.3, false);
+    shockwave(a, blood, d.crit ? 2.8 : 1.8);
+    bloodMist(a, d.crit);
     floater(a, (d.crit ? '暴击 ' : '') + G.fmt(d.amount), d.crit ? 'crit' : '', d.crit ? '#fde047' : '#fff3c4');
     if (d.crit) punch(0.34); else if (shake <= 0) punch(0.08);
     addLog((d.crit ? '暴击 ' : '') + '<span class="hit">-' + G.fmt(d.amount) + '</span>', '');
@@ -1557,6 +1662,7 @@ function loop(now) {
   applyPose(dt);
   stepParticles(dt);
   stepRings(dt);
+  stepMists(dt);
   hud(dt);
   updateMobs(dt, now);
   stepWeather(dt);
